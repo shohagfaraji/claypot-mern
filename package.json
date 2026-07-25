@@ -1,0 +1,17 @@
+{
+  "name": "claypot-mern",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A full-stack recipe-sharing platform built with the MERN stack.",
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=9.0.0"
+  },
+  "devDependencies": {
+    "prettier": "3.6.2"
+  }
+}
