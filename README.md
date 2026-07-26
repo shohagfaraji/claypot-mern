@@ -6,7 +6,7 @@ home-cooked recipes.
 ## Project status
 
 Claypot is in active development. The repository is currently being established with a
-maintainable foundation before the client and API features are introduced.
+maintainable foundation before product features are introduced.
 
 ## Technology
 
@@ -21,7 +21,7 @@ maintainable foundation before the client and API features are introduced.
 ```text
 claypot-mern/
 ├── client/     # React web application
-├── server/     # Express REST API (planned)
+├── server/     # Express REST API
 └── README.md
 ```
 
@@ -38,10 +38,25 @@ Install the current development dependencies:
 npm install
 ```
 
-Start the client development server:
+Create the server environment file:
 
 ```bash
-npm run dev:client
+cp server/.env.example server/.env
+```
+
+Start the client and API together:
+
+```bash
+npm run dev
+```
+
+The client runs at `http://localhost:5173` and the API runs at `http://localhost:5000`.
+Individual workspaces can also be started with `npm run dev:client` or `npm run dev:server`.
+
+Run the test suite:
+
+```bash
+npm test
 ```
 
 Create a production build:
@@ -61,5 +76,3 @@ Run the available lint checks:
 ```bash
 npm run lint
 ```
-
-Server setup instructions will be added when the API is introduced.

@@ -14,7 +14,7 @@ function App() {
         </a>
         <Badge
           variant="outline"
-          className="hidden h-auto border-primary/25 bg-card/50 px-3 py-1.5 text-[0.68rem] font-bold tracking-[0.1em] text-primary uppercase sm:inline-flex"
+          className="hidden h-auto border-primary/25 bg-card/50 px-3 py-1.5 text-[0.68rem] font-bold tracking-widest text-primary uppercase sm:inline-flex"
         >
           In development
         </Badge>
