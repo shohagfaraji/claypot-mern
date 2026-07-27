@@ -7,6 +7,7 @@ import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { notFound } from './middleware/not-found.js';
+import { authRouter } from './routes/auth.route.js';
 import { healthRouter } from './routes/health.route.js';
 
 export function createApp() {
@@ -37,6 +38,7 @@ export function createApp() {
   app.use(express.json({ limit: '1mb' }));
 
   app.use('/api/v1/health', healthRouter);
+  app.use('/api/v1/auth', authRouter);
 
   app.use(notFound);
   app.use(errorHandler);
