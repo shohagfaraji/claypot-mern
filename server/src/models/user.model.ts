@@ -1,8 +1,22 @@
-import { model, Schema, type InferSchemaType } from 'mongoose';
+import { model, Schema } from 'mongoose';
 
 export const userRoles = ['user', 'admin'] as const;
 
-const userSchema = new Schema(
+export interface User {
+  name: string;
+  username: string;
+  email: string;
+  passwordHash: string;
+  avatarUrl: string | null;
+  bio: string | null;
+  role: (typeof userRoles)[number];
+  isEmailVerified: boolean;
+  lastLoginAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const userSchema = new Schema<User>(
   {
     name: {
       type: String,
@@ -75,7 +89,5 @@ const userSchema = new Schema(
     },
   },
 );
-
-export type User = InferSchemaType<typeof userSchema>;
 
 export const UserModel = model<User>('User', userSchema);
