@@ -2,12 +2,17 @@ import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '../../src/errors/app-error.js';
 
-const { registerUserMock } = vi.hoisted(() => ({
+const { createAuthSessionMock, registerUserMock } = vi.hoisted(() => ({
+  createAuthSessionMock: vi.fn(),
   registerUserMock: vi.fn(),
 }));
 
 vi.mock('../../src/services/auth.service.js', () => ({
   registerUser: registerUserMock,
+}));
+
+vi.mock('../../src/services/session.service.js', () => ({
+  createAuthSession: createAuthSessionMock,
 }));
 
 import { createApp } from '../../src/app.js';
@@ -38,9 +43,15 @@ describe('POST /api/v1/auth/register', () => {
       isEmailVerified: false,
       createdAt: new Date('2026-07-27T08:00:00.000Z'),
     });
+    createAuthSessionMock.mockResolvedValue({
+      accessToken: 'signed-access-token',
+      refreshToken: 'raw-refresh-token',
+      refreshTokenExpiresAt: new Date('2026-08-03T08:00:00.000Z'),
+    });
 
     const response = await request(app)
       .post('/api/v1/auth/register')
+      .set('User-Agent', 'Claypot test browser')
       .send(registrationBody)
       .expect(201);
 
@@ -50,6 +61,16 @@ describe('POST /api/v1/auth/register', () => {
       email: 'amina@example.com',
       password: 'Claypot9',
     });
+    expect(createAuthSessionMock).toHaveBeenCalledWith(
+      {
+        userId: 'user-id',
+        role: 'user',
+      },
+      {
+        userAgent: 'Claypot test browser',
+        ipAddress: expect.any(String),
+      },
+    );
     expect(response.body).toEqual({
       data: {
         user: {
@@ -63,10 +84,21 @@ describe('POST /api/v1/auth/register', () => {
           isEmailVerified: false,
           createdAt: '2026-07-27T08:00:00.000Z',
         },
+        accessToken: 'signed-access-token',
       },
     });
     expect(response.body).not.toHaveProperty('data.user.password');
     expect(response.body).not.toHaveProperty('data.user.passwordHash');
+    expect(response.body).not.toHaveProperty('data.refreshToken');
+
+    const cookies = response.headers['set-cookie'];
+
+    expect(cookies).toEqual(
+      expect.arrayContaining([expect.stringContaining('claypot_refresh=raw-refresh-token')]),
+    );
+    expect(cookies).toEqual(expect.arrayContaining([expect.stringContaining('HttpOnly')]));
+    expect(cookies).toEqual(expect.arrayContaining([expect.stringContaining('Path=/api/v1/auth')]));
+    expect(cookies).toEqual(expect.arrayContaining([expect.stringContaining('SameSite=Lax')]));
   });
 
   it('rejects invalid input before calling the service', async () => {
@@ -79,6 +111,7 @@ describe('POST /api/v1/auth/register', () => {
       .expect(400);
 
     expect(registerUserMock).not.toHaveBeenCalled();
+    expect(createAuthSessionMock).not.toHaveBeenCalled();
     expect(response.body.error.code).toBe('VALIDATION_ERROR');
   });
 
@@ -102,5 +135,6 @@ describe('POST /api/v1/auth/register', () => {
         message: 'An account with that email or username already exists.',
       },
     });
+    expect(createAuthSessionMock).not.toHaveBeenCalled();
   });
 });
