@@ -1,20 +1,44 @@
 import 'dotenv/config';
 import { z } from 'zod';
 
-const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  PORT: z.coerce.number().int().positive().max(65_535).default(5000),
-  CLIENT_ORIGIN: z.url().default('http://localhost:5173'),
-  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
-  MONGODB_URI: z
-    .string()
-    .refine((value) => value.startsWith('mongodb://') || value.startsWith('mongodb+srv://'), {
-      message: 'Must be a valid MongoDB connection string',
-    })
-    .default('mongodb://127.0.0.1:27017/claypot'),
-  MONGODB_SERVER_SELECTION_TIMEOUT_MS: z.coerce.number().int().positive().max(60_000).default(5000),
-  MONGODB_MAX_POOL_SIZE: z.coerce.number().int().positive().max(100).default(10),
-});
+const developmentAccessTokenSecret = 'development-only-access-token-secret';
+
+const envSchema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    PORT: z.coerce.number().int().positive().max(65_535).default(5000),
+    CLIENT_ORIGIN: z.url().default('http://localhost:5173'),
+    LOG_LEVEL: z
+      .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
+      .default('info'),
+    MONGODB_URI: z
+      .string()
+      .refine((value) => value.startsWith('mongodb://') || value.startsWith('mongodb+srv://'), {
+        message: 'Must be a valid MongoDB connection string',
+      })
+      .default('mongodb://127.0.0.1:27017/claypot'),
+    MONGODB_SERVER_SELECTION_TIMEOUT_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(60_000)
+      .default(5000),
+    MONGODB_MAX_POOL_SIZE: z.coerce.number().int().positive().max(100).default(10),
+    ACCESS_TOKEN_SECRET: z.string().min(32).default(developmentAccessTokenSecret),
+    ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().max(60).default(15),
+  })
+  .superRefine((environment, context) => {
+    if (
+      environment.NODE_ENV === 'production' &&
+      environment.ACCESS_TOKEN_SECRET === developmentAccessTokenSecret
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['ACCESS_TOKEN_SECRET'],
+        message: 'A unique access token secret is required in production',
+      });
+    }
+  });
 
 export type Environment = z.infer<typeof envSchema>;
 
