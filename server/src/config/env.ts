@@ -6,6 +6,14 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().max(65_535).default(5000),
   CLIENT_ORIGIN: z.url().default('http://localhost:5173'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+  MONGODB_URI: z
+    .string()
+    .refine((value) => value.startsWith('mongodb://') || value.startsWith('mongodb+srv://'), {
+      message: 'Must be a valid MongoDB connection string',
+    })
+    .default('mongodb://127.0.0.1:27017/claypot'),
+  MONGODB_SERVER_SELECTION_TIMEOUT_MS: z.coerce.number().int().positive().max(60_000).default(5000),
+  MONGODB_MAX_POOL_SIZE: z.coerce.number().int().positive().max(100).default(10),
 });
 
 export type Environment = z.infer<typeof envSchema>;

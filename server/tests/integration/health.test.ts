@@ -27,4 +27,16 @@ describe('API health', () => {
       },
     });
   });
+
+  it('reports when the database is not ready', async () => {
+    const response = await request(app).get('/api/v1/health/ready').expect(503);
+
+    expect(response.body).toEqual({
+      status: 'unavailable',
+      checks: {
+        database: 'disconnected',
+      },
+    });
+    expect(response.headers['cache-control']).toBe('no-store');
+  });
 });
