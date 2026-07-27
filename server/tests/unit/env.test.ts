@@ -13,6 +13,7 @@ describe('environment configuration', () => {
       MONGODB_MAX_POOL_SIZE: 10,
       ACCESS_TOKEN_SECRET: 'development-only-access-token-secret',
       ACCESS_TOKEN_TTL_MINUTES: 15,
+      REFRESH_TOKEN_TTL_DAYS: 7,
     });
   });
 
@@ -27,6 +28,9 @@ describe('environment configuration', () => {
       'Invalid environment variables',
     );
     expect(() => loadEnv({ ACCESS_TOKEN_SECRET: 'too-short' })).toThrow(
+      'Invalid environment variables',
+    );
+    expect(() => loadEnv({ REFRESH_TOKEN_TTL_DAYS: '31' })).toThrow(
       'Invalid environment variables',
     );
   });

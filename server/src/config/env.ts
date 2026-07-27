@@ -26,6 +26,7 @@ const envSchema = z
     MONGODB_MAX_POOL_SIZE: z.coerce.number().int().positive().max(100).default(10),
     ACCESS_TOKEN_SECRET: z.string().min(32).default(developmentAccessTokenSecret),
     ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().max(60).default(15),
+    REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().max(30).default(7),
   })
   .superRefine((environment, context) => {
     if (
