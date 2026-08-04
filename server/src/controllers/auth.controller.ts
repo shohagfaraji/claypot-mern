@@ -1,8 +1,9 @@
 import type { Request, RequestHandler, Response } from 'express';
+import { AppError } from '../errors/app-error.js';
 import { getRefreshTokenCookieOptions, refreshTokenCookieName } from '../lib/refresh-token.js';
 import type { LoginInput, RegisterInput } from '../schemas/auth.schema.js';
 import { authenticateUser, type PublicUser, registerUser } from '../services/auth.service.js';
-import { createAuthSession } from '../services/session.service.js';
+import { createAuthSession, rotateAuthSession } from '../services/session.service.js';
 
 async function startSession(request: Request, response: Response, user: PublicUser) {
   const userAgent = request.get('user-agent');
@@ -43,6 +44,28 @@ export const login: RequestHandler = async (request, response) => {
     data: {
       user,
       accessToken,
+    },
+  });
+};
+
+export const refresh: RequestHandler = async (request, response) => {
+  const currentRefreshToken = request.cookies[refreshTokenCookieName] as unknown;
+
+  if (typeof currentRefreshToken !== 'string' || currentRefreshToken.length === 0) {
+    throw new AppError(401, 'INVALID_SESSION', 'Refresh session is invalid or expired.');
+  }
+
+  const userAgent = request.get('user-agent');
+  const ipAddress = request.ip;
+  const session = await rotateAuthSession(currentRefreshToken, {
+    ...(ipAddress === undefined ? {} : { ipAddress }),
+    ...(userAgent === undefined ? {} : { userAgent }),
+  });
+
+  response.cookie(refreshTokenCookieName, session.refreshToken, getRefreshTokenCookieOptions());
+  response.status(200).json({
+    data: {
+      accessToken: session.accessToken,
     },
   });
 };

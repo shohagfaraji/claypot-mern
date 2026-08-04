@@ -2,11 +2,13 @@ import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '../../src/errors/app-error.js';
 
-const { authenticateUserMock, createAuthSessionMock, registerUserMock } = vi.hoisted(() => ({
-  authenticateUserMock: vi.fn(),
-  createAuthSessionMock: vi.fn(),
-  registerUserMock: vi.fn(),
-}));
+const { authenticateUserMock, createAuthSessionMock, registerUserMock, rotateAuthSessionMock } =
+  vi.hoisted(() => ({
+    authenticateUserMock: vi.fn(),
+    createAuthSessionMock: vi.fn(),
+    registerUserMock: vi.fn(),
+    rotateAuthSessionMock: vi.fn(),
+  }));
 
 vi.mock('../../src/services/auth.service.js', () => ({
   authenticateUser: authenticateUserMock,
@@ -15,6 +17,7 @@ vi.mock('../../src/services/auth.service.js', () => ({
 
 vi.mock('../../src/services/session.service.js', () => ({
   createAuthSession: createAuthSessionMock,
+  rotateAuthSession: rotateAuthSessionMock,
 }));
 
 import { createApp } from '../../src/app.js';
@@ -240,6 +243,67 @@ describe('POST /api/v1/auth/login', () => {
       error: {
         code: 'INVALID_CREDENTIALS',
         message: 'Email, username, or password is incorrect.',
+      },
+    });
+  });
+});
+
+describe('POST /api/v1/auth/refresh', () => {
+  const app = createApp();
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('rotates the refresh token and returns a new access token', async () => {
+    rotateAuthSessionMock.mockResolvedValue({
+      accessToken: 'new-access-token',
+      refreshToken: 'new-refresh-token',
+      refreshTokenExpiresAt: new Date('2026-08-12T08:00:00.000Z'),
+    });
+
+    const response = await request(app)
+      .post('/api/v1/auth/refresh')
+      .set('Cookie', 'claypot_refresh=current-refresh-token')
+      .set('User-Agent', 'Claypot test browser')
+      .expect(200);
+
+    expect(rotateAuthSessionMock).toHaveBeenCalledWith('current-refresh-token', {
+      userAgent: 'Claypot test browser',
+      ipAddress: expect.any(String),
+    });
+    expect(response.body).toEqual({
+      data: {
+        accessToken: 'new-access-token',
+      },
+    });
+    expect(response.body).not.toHaveProperty('data.refreshToken');
+    expect(response.headers['set-cookie']).toEqual(
+      expect.arrayContaining([expect.stringContaining('claypot_refresh=new-refresh-token')]),
+    );
+  });
+
+  it('rejects requests without a refresh cookie', async () => {
+    const response = await request(app).post('/api/v1/auth/refresh').expect(401);
+
+    expect(rotateAuthSessionMock).not.toHaveBeenCalled();
+    expect(response.body.error.code).toBe('INVALID_SESSION');
+  });
+
+  it('rejects an invalid refresh session', async () => {
+    rotateAuthSessionMock.mockRejectedValue(
+      new AppError(401, 'INVALID_SESSION', 'Refresh session is invalid or expired.'),
+    );
+
+    const response = await request(app)
+      .post('/api/v1/auth/refresh')
+      .set('Cookie', 'claypot_refresh=invalid-refresh-token')
+      .expect(401);
+
+    expect(response.body).toEqual({
+      error: {
+        code: 'INVALID_SESSION',
+        message: 'Refresh session is invalid or expired.',
       },
     });
   });
