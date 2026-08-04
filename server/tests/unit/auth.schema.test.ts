@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { registerInputSchema } from '../../src/schemas/auth.schema.js';
+import { loginInputSchema, registerInputSchema } from '../../src/schemas/auth.schema.js';
 
 const validRegistration = {
   name: '  Amina Rahman  ',
@@ -62,6 +62,43 @@ describe('registration input schema', () => {
     });
 
     expect(result.success).toBe(false);
+    expect(result.error?.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'unrecognized_keys',
+        }),
+      ]),
+    );
+  });
+});
+
+describe('login input schema', () => {
+  it.each([
+    ['email address', '  AMINA@EXAMPLE.COM  ', 'amina@example.com'],
+    ['username', '  Amina_Kitchen  ', 'amina_kitchen'],
+  ])('accepts and normalizes a valid %s', (_case, identifier, expectedIdentifier) => {
+    expect(
+      loginInputSchema.parse({
+        identifier,
+        password: 'Claypot9',
+      }),
+    ).toEqual({
+      identifier: expectedIdentifier,
+      password: 'Claypot9',
+    });
+  });
+
+  it('rejects malformed credentials and unknown fields', () => {
+    const result = loginInputSchema.safeParse({
+      identifier: '_invalid_',
+      password: '',
+      role: 'admin',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map((issue) => issue.path[0])).toEqual(
+      expect.arrayContaining(['identifier', 'password']),
+    );
     expect(result.error?.issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

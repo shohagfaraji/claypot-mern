@@ -1,21 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { createUserMock, hashPasswordMock } = vi.hoisted(() => ({
-  createUserMock: vi.fn(),
-  hashPasswordMock: vi.fn(),
-}));
+const { createUserMock, findUserMock, hashPasswordMock, selectPasswordMock, verifyPasswordMock } =
+  vi.hoisted(() => ({
+    createUserMock: vi.fn(),
+    findUserMock: vi.fn(),
+    hashPasswordMock: vi.fn(),
+    selectPasswordMock: vi.fn(),
+    verifyPasswordMock: vi.fn(),
+  }));
 
 vi.mock('../../src/models/user.model.js', () => ({
   UserModel: {
     create: createUserMock,
+    findOne: findUserMock,
   },
 }));
 
 vi.mock('../../src/lib/password.js', () => ({
   hashPassword: hashPasswordMock,
+  verifyPassword: verifyPasswordMock,
 }));
 
-import { registerUser } from '../../src/services/auth.service.js';
+import { authenticateUser, registerUser } from '../../src/services/auth.service.js';
 
 const registrationInput = {
   name: 'Amina Rahman',
@@ -27,6 +33,9 @@ const registrationInput = {
 describe('authentication service', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    findUserMock.mockReturnValue({
+      select: selectPasswordMock,
+    });
   });
 
   it('hashes the password and creates a user', async () => {
@@ -87,5 +96,100 @@ describe('authentication service', () => {
     createUserMock.mockRejectedValue(databaseError);
 
     await expect(registerUser(registrationInput)).rejects.toBe(databaseError);
+  });
+});
+
+describe('login authentication', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    findUserMock.mockReturnValue({
+      select: selectPasswordMock,
+    });
+  });
+
+  it('authenticates a user and records the login time', async () => {
+    const saveUserMock = vi.fn().mockResolvedValue(undefined);
+    const user = {
+      id: 'user-id',
+      name: 'Amina Rahman',
+      username: 'amina_kitchen',
+      email: 'amina@example.com',
+      passwordHash: 'stored-password-hash',
+      avatarUrl: null,
+      bio: null,
+      role: 'user',
+      isEmailVerified: false,
+      lastLoginAt: null,
+      createdAt: new Date('2026-07-27T08:00:00.000Z'),
+      save: saveUserMock,
+    };
+
+    selectPasswordMock.mockResolvedValue(user);
+    verifyPasswordMock.mockResolvedValue(true);
+
+    const result = await authenticateUser({
+      identifier: 'amina@example.com',
+      password: 'Claypot9',
+    });
+
+    expect(findUserMock).toHaveBeenCalledWith({
+      $or: [{ email: 'amina@example.com' }, { username: 'amina@example.com' }],
+    });
+    expect(selectPasswordMock).toHaveBeenCalledWith('+passwordHash');
+    expect(verifyPasswordMock).toHaveBeenCalledWith('Claypot9', 'stored-password-hash');
+    expect(user.lastLoginAt).toBeInstanceOf(Date);
+    expect(saveUserMock).toHaveBeenCalledOnce();
+    expect(result).toEqual({
+      id: 'user-id',
+      name: 'Amina Rahman',
+      username: 'amina_kitchen',
+      email: 'amina@example.com',
+      avatarUrl: null,
+      bio: null,
+      role: 'user',
+      isEmailVerified: false,
+      createdAt: new Date('2026-07-27T08:00:00.000Z'),
+    });
+    expect(result).not.toHaveProperty('passwordHash');
+  });
+
+  it('returns the same error for an incorrect password', async () => {
+    const saveUserMock = vi.fn();
+
+    selectPasswordMock.mockResolvedValue({
+      passwordHash: 'stored-password-hash',
+      save: saveUserMock,
+    });
+    verifyPasswordMock.mockResolvedValue(false);
+
+    await expect(
+      authenticateUser({
+        identifier: 'amina_kitchen',
+        password: 'Incorrect9',
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 401,
+      code: 'INVALID_CREDENTIALS',
+    });
+    expect(saveUserMock).not.toHaveBeenCalled();
+  });
+
+  it('performs password verification for an unknown account', async () => {
+    selectPasswordMock.mockResolvedValue(null);
+    verifyPasswordMock.mockResolvedValue(false);
+
+    await expect(
+      authenticateUser({
+        identifier: 'unknown@example.com',
+        password: 'Claypot9',
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 401,
+      code: 'INVALID_CREDENTIALS',
+    });
+    expect(verifyPasswordMock).toHaveBeenCalledWith(
+      'Claypot9',
+      expect.stringMatching(/^\$2b\$12\$/),
+    );
   });
 });

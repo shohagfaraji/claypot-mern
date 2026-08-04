@@ -1,9 +1,11 @@
 import { AppError } from '../errors/app-error.js';
-import { hashPassword } from '../lib/password.js';
+import { hashPassword, verifyPassword } from '../lib/password.js';
 import { UserModel } from '../models/user.model.js';
-import type { RegisterInput } from '../schemas/auth.schema.js';
+import type { LoginInput, RegisterInput } from '../schemas/auth.schema.js';
 
-export interface RegisteredUser {
+const fallbackPasswordHash = '$2b$12$EwbyiAokvt5b.KYCGIXK.ujjVDkteVub4lXR.6lG6VJFVJIUCRKPS';
+
+export interface PublicUser {
   id: string;
   name: string;
   username: string;
@@ -19,7 +21,7 @@ function isDuplicateKeyError(error: unknown): error is { code: 11000 } {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === 11000;
 }
 
-export async function registerUser(input: RegisterInput): Promise<RegisteredUser> {
+export async function registerUser(input: RegisterInput): Promise<PublicUser> {
   const passwordHash = await hashPassword(input.password);
 
   try {
@@ -53,4 +55,33 @@ export async function registerUser(input: RegisterInput): Promise<RegisteredUser
 
     throw error;
   }
+}
+
+export async function authenticateUser(input: LoginInput): Promise<PublicUser> {
+  const user = await UserModel.findOne({
+    $or: [{ email: input.identifier }, { username: input.identifier }],
+  }).select('+passwordHash');
+  const passwordMatches = await verifyPassword(
+    input.password,
+    user?.passwordHash ?? fallbackPasswordHash,
+  );
+
+  if (user === null || !passwordMatches) {
+    throw new AppError(401, 'INVALID_CREDENTIALS', 'Email, username, or password is incorrect.');
+  }
+
+  user.lastLoginAt = new Date();
+  await user.save();
+
+  return {
+    id: user.id,
+    name: user.name,
+    username: user.username,
+    email: user.email,
+    avatarUrl: user.avatarUrl,
+    bio: user.bio,
+    role: user.role,
+    isEmailVerified: user.isEmailVerified,
+    createdAt: user.createdAt,
+  };
 }

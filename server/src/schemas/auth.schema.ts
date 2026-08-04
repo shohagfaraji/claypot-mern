@@ -40,4 +40,28 @@ export const registerInputSchema = z.strictObject({
   password: passwordSchema,
 });
 
+const loginIdentifierSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(3, 'Enter your email address or username.')
+  .max(254, 'Email address or username is too long.')
+  .refine(
+    (identifier) =>
+      z.email().safeParse(identifier).success || usernameSchema.safeParse(identifier).success,
+    'Enter a valid email address or username.',
+  );
+
+export const loginInputSchema = z.strictObject({
+  identifier: loginIdentifierSchema,
+  password: z
+    .string()
+    .min(1, 'Password is required.')
+    .max(72, 'Password cannot exceed 72 characters.')
+    .refine((password) => Buffer.byteLength(password, 'utf8') <= 72, {
+      message: 'Password cannot exceed 72 bytes.',
+    }),
+});
+
 export type RegisterInput = z.infer<typeof registerInputSchema>;
+export type LoginInput = z.infer<typeof loginInputSchema>;
