@@ -104,3 +104,19 @@ export async function rotateAuthSession(
     refreshTokenExpiresAt,
   };
 }
+
+export async function revokeAuthSession(refreshToken: string): Promise<void> {
+  const tokenHash = hashRefreshToken(refreshToken);
+
+  await RefreshSessionModel.findOneAndUpdate(
+    {
+      tokenHash,
+      revokedAt: null,
+    },
+    {
+      $set: {
+        revokedAt: new Date(),
+      },
+    },
+  );
+}

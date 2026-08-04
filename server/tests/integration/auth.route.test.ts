@@ -2,13 +2,19 @@ import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '../../src/errors/app-error.js';
 
-const { authenticateUserMock, createAuthSessionMock, registerUserMock, rotateAuthSessionMock } =
-  vi.hoisted(() => ({
-    authenticateUserMock: vi.fn(),
-    createAuthSessionMock: vi.fn(),
-    registerUserMock: vi.fn(),
-    rotateAuthSessionMock: vi.fn(),
-  }));
+const {
+  authenticateUserMock,
+  createAuthSessionMock,
+  registerUserMock,
+  revokeAuthSessionMock,
+  rotateAuthSessionMock,
+} = vi.hoisted(() => ({
+  authenticateUserMock: vi.fn(),
+  createAuthSessionMock: vi.fn(),
+  registerUserMock: vi.fn(),
+  revokeAuthSessionMock: vi.fn(),
+  rotateAuthSessionMock: vi.fn(),
+}));
 
 vi.mock('../../src/services/auth.service.js', () => ({
   authenticateUser: authenticateUserMock,
@@ -17,6 +23,7 @@ vi.mock('../../src/services/auth.service.js', () => ({
 
 vi.mock('../../src/services/session.service.js', () => ({
   createAuthSession: createAuthSessionMock,
+  revokeAuthSession: revokeAuthSessionMock,
   rotateAuthSession: rotateAuthSessionMock,
 }));
 
@@ -306,5 +313,42 @@ describe('POST /api/v1/auth/refresh', () => {
         message: 'Refresh session is invalid or expired.',
       },
     });
+  });
+});
+
+describe('POST /api/v1/auth/logout', () => {
+  const app = createApp();
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    revokeAuthSessionMock.mockResolvedValue(undefined);
+  });
+
+  it('revokes the current session and clears the refresh cookie', async () => {
+    const response = await request(app)
+      .post('/api/v1/auth/logout')
+      .set('Cookie', 'claypot_refresh=current-refresh-token')
+      .expect(204);
+
+    expect(revokeAuthSessionMock).toHaveBeenCalledWith('current-refresh-token');
+    expect(response.text).toBe('');
+
+    const cookies = response.headers['set-cookie'];
+
+    expect(cookies).toEqual(expect.arrayContaining([expect.stringContaining('claypot_refresh=')]));
+    expect(cookies).toEqual(
+      expect.arrayContaining([expect.stringContaining('Expires=Thu, 01 Jan 1970')]),
+    );
+    expect(cookies).toEqual(expect.arrayContaining([expect.stringContaining('Path=/api/v1/auth')]));
+    expect(cookies).toEqual(expect.arrayContaining([expect.stringContaining('HttpOnly')]));
+  });
+
+  it('remains successful when no refresh cookie is present', async () => {
+    const response = await request(app).post('/api/v1/auth/logout').expect(204);
+
+    expect(revokeAuthSessionMock).not.toHaveBeenCalled();
+    expect(response.headers['set-cookie']).toEqual(
+      expect.arrayContaining([expect.stringContaining('claypot_refresh=')]),
+    );
   });
 });

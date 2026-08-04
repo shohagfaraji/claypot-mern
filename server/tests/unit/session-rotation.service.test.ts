@@ -40,7 +40,7 @@ vi.mock('../../src/models/user.model.js', () => ({
   },
 }));
 
-import { rotateAuthSession } from '../../src/services/session.service.js';
+import { revokeAuthSession, rotateAuthSession } from '../../src/services/session.service.js';
 
 describe('session rotation', () => {
   beforeEach(() => {
@@ -121,5 +121,23 @@ describe('session rotation', () => {
       statusCode: 401,
       code: 'INVALID_SESSION',
     });
+  });
+
+  it('revokes a matching active session without exposing its existence', async () => {
+    hashRefreshTokenMock.mockReset().mockReturnValue('a'.repeat(64));
+    rotateSessionMock.mockResolvedValue(null);
+
+    await expect(revokeAuthSession('current-refresh-token')).resolves.toBeUndefined();
+    expect(rotateSessionMock).toHaveBeenCalledWith(
+      {
+        tokenHash: 'a'.repeat(64),
+        revokedAt: null,
+      },
+      {
+        $set: {
+          revokedAt: new Date('2026-08-05T08:00:00.000Z'),
+        },
+      },
+    );
   });
 });

@@ -28,3 +28,14 @@ export function getRefreshTokenCookieOptions(
     maxAge: environment.REFRESH_TOKEN_TTL_DAYS * millisecondsPerDay,
   };
 }
+
+export function getClearRefreshTokenCookieOptions(
+  environment: RefreshCookieEnvironment = env,
+): CookieOptions {
+  return {
+    httpOnly: true,
+    secure: environment.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/api/v1/auth',
+  };
+}

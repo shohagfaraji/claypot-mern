@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createRefreshToken,
+  getClearRefreshTokenCookieOptions,
   getRefreshTokenCookieOptions,
   hashRefreshToken,
   refreshTokenCookieName,
@@ -55,6 +56,20 @@ describe('refresh token utilities', () => {
       secure: true,
       sameSite: 'lax',
       maxAge: 2_592_000_000,
+    });
+  });
+
+  it('clears the cookie using the same scope and security settings', () => {
+    expect(
+      getClearRefreshTokenCookieOptions({
+        NODE_ENV: 'production',
+        REFRESH_TOKEN_TTL_DAYS: 7,
+      }),
+    ).toEqual({
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      path: '/api/v1/auth',
     });
   });
 });

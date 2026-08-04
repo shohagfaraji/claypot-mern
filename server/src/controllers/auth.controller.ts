@@ -1,9 +1,17 @@
 import type { Request, RequestHandler, Response } from 'express';
 import { AppError } from '../errors/app-error.js';
-import { getRefreshTokenCookieOptions, refreshTokenCookieName } from '../lib/refresh-token.js';
+import {
+  getClearRefreshTokenCookieOptions,
+  getRefreshTokenCookieOptions,
+  refreshTokenCookieName,
+} from '../lib/refresh-token.js';
 import type { LoginInput, RegisterInput } from '../schemas/auth.schema.js';
 import { authenticateUser, type PublicUser, registerUser } from '../services/auth.service.js';
-import { createAuthSession, rotateAuthSession } from '../services/session.service.js';
+import {
+  createAuthSession,
+  revokeAuthSession,
+  rotateAuthSession,
+} from '../services/session.service.js';
 
 async function startSession(request: Request, response: Response, user: PublicUser) {
   const userAgent = request.get('user-agent');
@@ -68,4 +76,15 @@ export const refresh: RequestHandler = async (request, response) => {
       accessToken: session.accessToken,
     },
   });
+};
+
+export const logout: RequestHandler = async (request, response) => {
+  const currentRefreshToken = request.cookies[refreshTokenCookieName] as unknown;
+
+  if (typeof currentRefreshToken === 'string' && currentRefreshToken.length > 0) {
+    await revokeAuthSession(currentRefreshToken);
+  }
+
+  response.clearCookie(refreshTokenCookieName, getClearRefreshTokenCookieOptions());
+  response.status(204).send();
 };
