@@ -10,6 +10,7 @@ import { errorHandler } from './middleware/error-handler.js';
 import { notFound } from './middleware/not-found.js';
 import { authRouter } from './routes/auth.route.js';
 import { healthRouter } from './routes/health.route.js';
+import { recipeRouter } from './routes/recipe.route.js';
 
 export function createApp() {
   const app = express();
@@ -41,6 +42,7 @@ export function createApp() {
 
   app.use('/api/v1/health', healthRouter);
   app.use('/api/v1/auth', authRouter);
+  app.use('/api/v1/recipes', recipeRouter);
 
   app.use(notFound);
   app.use(errorHandler);
