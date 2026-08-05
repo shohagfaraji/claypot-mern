@@ -35,6 +35,44 @@ const tagSchema = z
   .min(1, 'Tags cannot be empty.')
   .max(30, 'Tags cannot exceed 30 characters.');
 
+const optionalFilterSchema = (label: string) =>
+  z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z
+      .string()
+      .trim()
+      .min(2, `${label} must contain at least 2 characters.`)
+      .max(60, `${label} cannot exceed 60 characters.`)
+      .optional(),
+  );
+
+const searchSchema = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  z.string().trim().max(100, 'Search cannot exceed 100 characters.').optional(),
+);
+
+const listTagsSchema = z
+  .preprocess(
+    (value) => {
+      const values = Array.isArray(value) ? value : typeof value === 'string' ? [value] : value;
+
+      if (!Array.isArray(values)) {
+        return values;
+      }
+
+      return values
+        .flatMap((entry) =>
+          typeof entry === 'string' ? entry.split(',').map((tag) => tag.trim()) : [entry],
+        )
+        .filter((entry) => typeof entry !== 'string' || entry.length > 0);
+    },
+    z
+      .array(tagSchema)
+      .max(5, 'Filter by at most 5 tags.')
+      .transform((tags) => [...new Set(tags)]),
+  )
+  .default([]);
+
 export const createRecipeInputSchema = z.strictObject({
   title: z
     .string()
@@ -88,4 +126,16 @@ export const createRecipeInputSchema = z.strictObject({
     .default([]),
 });
 
+export const listRecipesQuerySchema = z.strictObject({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(24).default(12),
+  search: searchSchema,
+  difficulty: z.enum(recipeDifficulties).optional(),
+  cuisine: optionalFilterSchema('Cuisine'),
+  category: optionalFilterSchema('Category'),
+  tags: listTagsSchema,
+  sort: z.enum(['newest', 'oldest', 'quickest']).default('newest'),
+});
+
 export type CreateRecipeInput = z.infer<typeof createRecipeInputSchema>;
+export type ListRecipesQuery = z.infer<typeof listRecipesQuerySchema>;
