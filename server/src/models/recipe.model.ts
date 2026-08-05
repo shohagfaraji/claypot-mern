@@ -1,9 +1,40 @@
-import { model, Schema, type InferSchemaType } from 'mongoose';
+import { model, Schema, type Types } from 'mongoose';
 
 export const recipeDifficulties = ['easy', 'medium', 'hard'] as const;
 export const recipeStatuses = ['draft', 'published'] as const;
 
-const ingredientSchema = new Schema(
+export interface RecipeIngredient {
+  name: string;
+  quantity: string;
+}
+
+export interface RecipeInstruction {
+  step: number;
+  description: string;
+}
+
+export interface Recipe {
+  author: Types.ObjectId;
+  title: string;
+  slug: string;
+  summary: string;
+  imageUrl: string | null;
+  ingredients: RecipeIngredient[];
+  instructions: RecipeInstruction[];
+  prepTimeMinutes: number;
+  cookTimeMinutes: number;
+  servings: number;
+  difficulty: (typeof recipeDifficulties)[number];
+  cuisine: string;
+  category: string;
+  tags: string[];
+  status: (typeof recipeStatuses)[number];
+  publishedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const ingredientSchema = new Schema<RecipeIngredient>(
   {
     name: {
       type: String,
@@ -21,7 +52,7 @@ const ingredientSchema = new Schema(
   { _id: false },
 );
 
-const instructionSchema = new Schema(
+const instructionSchema = new Schema<RecipeInstruction>(
   {
     step: {
       type: Number,
@@ -38,7 +69,7 @@ const instructionSchema = new Schema(
   { _id: false },
 );
 
-const recipeSchema = new Schema(
+const recipeSchema = new Schema<Recipe>(
   {
     author: {
       type: Schema.Types.ObjectId,
@@ -160,7 +191,5 @@ const recipeSchema = new Schema(
 
 recipeSchema.index({ status: 1, publishedAt: -1 });
 recipeSchema.index({ title: 'text', summary: 'text', tags: 'text' });
-
-export type Recipe = InferSchemaType<typeof recipeSchema>;
 
 export const RecipeModel = model<Recipe>('Recipe', recipeSchema);
