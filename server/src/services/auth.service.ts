@@ -17,6 +17,20 @@ export interface PublicUser {
   createdAt: Date;
 }
 
+function toPublicUser(user: PublicUser): PublicUser {
+  return {
+    id: user.id,
+    name: user.name,
+    username: user.username,
+    email: user.email,
+    avatarUrl: user.avatarUrl,
+    bio: user.bio,
+    role: user.role,
+    isEmailVerified: user.isEmailVerified,
+    createdAt: user.createdAt,
+  };
+}
+
 function isDuplicateKeyError(error: unknown): error is { code: 11000 } {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === 11000;
 }
@@ -32,17 +46,7 @@ export async function registerUser(input: RegisterInput): Promise<PublicUser> {
       passwordHash,
     });
 
-    return {
-      id: user.id,
-      name: user.name,
-      username: user.username,
-      email: user.email,
-      avatarUrl: user.avatarUrl,
-      bio: user.bio,
-      role: user.role,
-      isEmailVerified: user.isEmailVerified,
-      createdAt: user.createdAt,
-    };
+    return toPublicUser(user);
   } catch (error) {
     if (isDuplicateKeyError(error)) {
       throw new AppError(
@@ -73,15 +77,17 @@ export async function authenticateUser(input: LoginInput): Promise<PublicUser> {
   user.lastLoginAt = new Date();
   await user.save();
 
-  return {
-    id: user.id,
-    name: user.name,
-    username: user.username,
-    email: user.email,
-    avatarUrl: user.avatarUrl,
-    bio: user.bio,
-    role: user.role,
-    isEmailVerified: user.isEmailVerified,
-    createdAt: user.createdAt,
-  };
+  return toPublicUser(user);
+}
+
+export async function getCurrentUser(userId: string): Promise<PublicUser> {
+  const user = await UserModel.findById(userId).select(
+    'name username email avatarUrl bio role isEmailVerified createdAt',
+  );
+
+  if (user === null) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  return toPublicUser(user);
 }

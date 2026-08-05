@@ -6,7 +6,12 @@ import {
   refreshTokenCookieName,
 } from '../lib/refresh-token.js';
 import type { LoginInput, RegisterInput } from '../schemas/auth.schema.js';
-import { authenticateUser, type PublicUser, registerUser } from '../services/auth.service.js';
+import {
+  authenticateUser,
+  getCurrentUser,
+  type PublicUser,
+  registerUser,
+} from '../services/auth.service.js';
 import {
   createAuthSession,
   revokeAuthSession,
@@ -87,4 +92,18 @@ export const logout: RequestHandler = async (request, response) => {
 
   response.clearCookie(refreshTokenCookieName, getClearRefreshTokenCookieOptions());
   response.status(204).send();
+};
+
+export const me: RequestHandler = async (request, response) => {
+  if (request.auth === undefined) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  const user = await getCurrentUser(request.auth.userId);
+
+  response.status(200).json({
+    data: {
+      user,
+    },
+  });
 };

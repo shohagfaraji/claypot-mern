@@ -1,17 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { createUserMock, findUserMock, hashPasswordMock, selectPasswordMock, verifyPasswordMock } =
-  vi.hoisted(() => ({
-    createUserMock: vi.fn(),
-    findUserMock: vi.fn(),
-    hashPasswordMock: vi.fn(),
-    selectPasswordMock: vi.fn(),
-    verifyPasswordMock: vi.fn(),
-  }));
+const {
+  createUserMock,
+  findUserByIdMock,
+  findUserMock,
+  hashPasswordMock,
+  selectCurrentUserMock,
+  selectPasswordMock,
+  verifyPasswordMock,
+} = vi.hoisted(() => ({
+  createUserMock: vi.fn(),
+  findUserByIdMock: vi.fn(),
+  findUserMock: vi.fn(),
+  hashPasswordMock: vi.fn(),
+  selectCurrentUserMock: vi.fn(),
+  selectPasswordMock: vi.fn(),
+  verifyPasswordMock: vi.fn(),
+}));
 
 vi.mock('../../src/models/user.model.js', () => ({
   UserModel: {
     create: createUserMock,
+    findById: findUserByIdMock,
     findOne: findUserMock,
   },
 }));
@@ -21,7 +31,7 @@ vi.mock('../../src/lib/password.js', () => ({
   verifyPassword: verifyPasswordMock,
 }));
 
-import { authenticateUser, registerUser } from '../../src/services/auth.service.js';
+import { authenticateUser, getCurrentUser, registerUser } from '../../src/services/auth.service.js';
 
 const registrationInput = {
   name: 'Amina Rahman',
@@ -191,5 +201,55 @@ describe('login authentication', () => {
       'Claypot9',
       expect.stringMatching(/^\$2b\$12\$/),
     );
+  });
+});
+
+describe('current user lookup', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    findUserByIdMock.mockReturnValue({
+      select: selectCurrentUserMock,
+    });
+  });
+
+  it('returns the public profile for an existing user', async () => {
+    const createdAt = new Date('2026-07-27T08:00:00.000Z');
+
+    selectCurrentUserMock.mockResolvedValue({
+      id: 'user-id',
+      name: 'Amina Rahman',
+      username: 'amina_kitchen',
+      email: 'amina@example.com',
+      avatarUrl: null,
+      bio: null,
+      role: 'user',
+      isEmailVerified: false,
+      createdAt,
+    });
+
+    await expect(getCurrentUser('user-id')).resolves.toEqual({
+      id: 'user-id',
+      name: 'Amina Rahman',
+      username: 'amina_kitchen',
+      email: 'amina@example.com',
+      avatarUrl: null,
+      bio: null,
+      role: 'user',
+      isEmailVerified: false,
+      createdAt,
+    });
+    expect(findUserByIdMock).toHaveBeenCalledWith('user-id');
+    expect(selectCurrentUserMock).toHaveBeenCalledWith(
+      'name username email avatarUrl bio role isEmailVerified createdAt',
+    );
+  });
+
+  it('rejects a token identity whose user no longer exists', async () => {
+    selectCurrentUserMock.mockResolvedValue(null);
+
+    await expect(getCurrentUser('missing-user-id')).rejects.toMatchObject({
+      statusCode: 401,
+      code: 'UNAUTHORIZED',
+    });
   });
 });
