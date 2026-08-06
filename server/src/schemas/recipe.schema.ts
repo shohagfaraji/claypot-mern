@@ -137,5 +137,16 @@ export const listRecipesQuerySchema = z.strictObject({
   sort: z.enum(['newest', 'oldest', 'quickest']).default('newest'),
 });
 
+export const recipeSlugParamsSchema = z.strictObject({
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(1, 'Recipe slug is required.')
+    .max(160, 'Recipe slug is too long.')
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Recipe slug is invalid.'),
+});
+
 export type CreateRecipeInput = z.infer<typeof createRecipeInputSchema>;
 export type ListRecipesQuery = z.infer<typeof listRecipesQuerySchema>;
+export type RecipeSlugParams = z.infer<typeof recipeSlugParamsSchema>;

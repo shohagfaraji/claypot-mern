@@ -22,3 +22,14 @@ export function validateQuery(schema: ZodType): RequestHandler {
     }
   };
 }
+
+export function validateParams(schema: ZodType): RequestHandler {
+  return async (request, _response, next) => {
+    try {
+      request.validatedParams = await schema.parseAsync(request.params);
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+}

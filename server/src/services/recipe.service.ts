@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { Types, type PipelineStage } from 'mongoose';
+import { AppError } from '../errors/app-error.js';
 import { createSlugBase } from '../lib/slug.js';
 import { RecipeModel, type Recipe } from '../models/recipe.model.js';
 import type { CreateRecipeInput, ListRecipesQuery } from '../schemas/recipe.schema.js';
@@ -31,6 +32,15 @@ export interface RecipeListItem {
     username: string;
     avatarUrl: string | null;
   };
+}
+
+export interface RecipeDetail extends Omit<RecipeListItem, 'totalTimeMinutes'> {
+  ingredients: Recipe['ingredients'];
+  instructions: Recipe['instructions'];
+  servings: number;
+  totalTimeMinutes: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface PaginatedRecipes {
@@ -223,4 +233,66 @@ export async function listPublishedRecipes(query: ListRecipesQuery): Promise<Pag
       totalPages: Math.ceil(total / query.limit),
     },
   };
+}
+
+export async function getPublishedRecipeBySlug(slug: string): Promise<RecipeDetail> {
+  const pipeline: PipelineStage[] = [
+    {
+      $match: {
+        slug,
+        status: 'published',
+      },
+    },
+    { $limit: 1 },
+    {
+      $addFields: {
+        totalTimeMinutes: { $add: ['$prepTimeMinutes', '$cookTimeMinutes'] },
+      },
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'author',
+        foreignField: '_id',
+        as: 'authorProfile',
+      },
+    },
+    { $unwind: '$authorProfile' },
+    {
+      $project: {
+        _id: 0,
+        id: { $toString: '$_id' },
+        title: 1,
+        slug: 1,
+        summary: 1,
+        imageUrl: 1,
+        ingredients: 1,
+        instructions: 1,
+        prepTimeMinutes: 1,
+        cookTimeMinutes: 1,
+        totalTimeMinutes: 1,
+        servings: 1,
+        difficulty: 1,
+        cuisine: 1,
+        category: 1,
+        tags: 1,
+        publishedAt: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        author: {
+          id: { $toString: '$authorProfile._id' },
+          name: '$authorProfile.name',
+          username: '$authorProfile.username',
+          avatarUrl: '$authorProfile.avatarUrl',
+        },
+      },
+    },
+  ];
+  const [recipe] = await RecipeModel.aggregate<RecipeDetail>(pipeline);
+
+  if (recipe === undefined) {
+    throw new AppError(404, 'RECIPE_NOT_FOUND', 'Recipe was not found.');
+  }
+
+  return recipe;
 }

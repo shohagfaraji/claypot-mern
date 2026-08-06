@@ -1,8 +1,15 @@
 import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AppError } from '../../src/errors/app-error.js';
 
-const { createRecipeMock, listPublishedRecipesMock, verifyAccessTokenMock } = vi.hoisted(() => ({
+const {
+  createRecipeMock,
+  getPublishedRecipeBySlugMock,
+  listPublishedRecipesMock,
+  verifyAccessTokenMock,
+} = vi.hoisted(() => ({
   createRecipeMock: vi.fn(),
+  getPublishedRecipeBySlugMock: vi.fn(),
   listPublishedRecipesMock: vi.fn(),
   verifyAccessTokenMock: vi.fn(),
 }));
@@ -26,6 +33,7 @@ vi.mock('../../src/services/session.service.js', () => ({
 
 vi.mock('../../src/services/recipe.service.js', () => ({
   createRecipe: createRecipeMock,
+  getPublishedRecipeBySlug: getPublishedRecipeBySlugMock,
   listPublishedRecipes: listPublishedRecipesMock,
 }));
 
@@ -157,6 +165,67 @@ describe('GET /api/v1/recipes', () => {
 
     expect(listPublishedRecipesMock).not.toHaveBeenCalled();
     expect(response.body.error.code).toBe('VALIDATION_ERROR');
+  });
+});
+
+describe('GET /api/v1/recipes/:slug', () => {
+  const app = createApp();
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('returns a published recipe without authentication', async () => {
+    getPublishedRecipeBySlugMock.mockResolvedValue({
+      id: 'recipe-id',
+      title: 'Spiced Claypot Rice',
+      slug: 'spiced-claypot-rice',
+      ingredients: [{ name: 'Basmati rice', quantity: '2 cups' }],
+      instructions: [{ step: 1, description: 'Rinse the rice thoroughly.' }],
+      author: {
+        id: 'user-id',
+        name: 'Amina Rahman',
+        username: 'amina_kitchen',
+        avatarUrl: null,
+      },
+    });
+
+    const response = await request(app).get('/api/v1/recipes/Spiced-Claypot-Rice').expect(200);
+
+    expect(getPublishedRecipeBySlugMock).toHaveBeenCalledWith('spiced-claypot-rice');
+    expect(response.body).toMatchObject({
+      data: {
+        recipe: {
+          id: 'recipe-id',
+          slug: 'spiced-claypot-rice',
+          ingredients: expect.any(Array),
+          instructions: expect.any(Array),
+        },
+      },
+    });
+    expect(verifyAccessTokenMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a malformed slug before querying MongoDB', async () => {
+    const response = await request(app).get('/api/v1/recipes/invalid_slug').expect(400);
+
+    expect(getPublishedRecipeBySlugMock).not.toHaveBeenCalled();
+    expect(response.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('returns not found for a missing or unpublished recipe', async () => {
+    getPublishedRecipeBySlugMock.mockRejectedValue(
+      new AppError(404, 'RECIPE_NOT_FOUND', 'Recipe was not found.'),
+    );
+
+    const response = await request(app).get('/api/v1/recipes/missing-recipe').expect(404);
+
+    expect(response.body).toEqual({
+      error: {
+        code: 'RECIPE_NOT_FOUND',
+        message: 'Recipe was not found.',
+      },
+    });
   });
 });
 

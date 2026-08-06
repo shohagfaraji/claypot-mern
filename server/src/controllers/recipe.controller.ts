@@ -1,7 +1,15 @@
 import type { RequestHandler } from 'express';
 import { AppError } from '../errors/app-error.js';
-import type { CreateRecipeInput, ListRecipesQuery } from '../schemas/recipe.schema.js';
-import { createRecipe, listPublishedRecipes } from '../services/recipe.service.js';
+import type {
+  CreateRecipeInput,
+  ListRecipesQuery,
+  RecipeSlugParams,
+} from '../schemas/recipe.schema.js';
+import {
+  createRecipe,
+  getPublishedRecipeBySlug,
+  listPublishedRecipes,
+} from '../services/recipe.service.js';
 
 export const list: RequestHandler = async (request, response) => {
   const result = await listPublishedRecipes(request.validatedQuery as ListRecipesQuery);
@@ -10,6 +18,17 @@ export const list: RequestHandler = async (request, response) => {
     data: {
       recipes: result.items,
       pagination: result.pagination,
+    },
+  });
+};
+
+export const detail: RequestHandler = async (request, response) => {
+  const { slug } = request.validatedParams as RecipeSlugParams;
+  const recipe = await getPublishedRecipeBySlug(slug);
+
+  response.status(200).json({
+    data: {
+      recipe,
     },
   });
 };
