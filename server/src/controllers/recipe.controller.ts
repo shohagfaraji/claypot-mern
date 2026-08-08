@@ -3,12 +3,14 @@ import { AppError } from '../errors/app-error.js';
 import type {
   CreateRecipeInput,
   ListRecipesQuery,
+  RecipeIdParams,
   RecipeSlugParams,
 } from '../schemas/recipe.schema.js';
 import {
   createRecipe,
   getPublishedRecipeBySlug,
   listPublishedRecipes,
+  publishRecipe,
 } from '../services/recipe.service.js';
 
 export const list: RequestHandler = async (request, response) => {
@@ -41,6 +43,21 @@ export const create: RequestHandler = async (request, response) => {
   const recipe = await createRecipe(request.auth.userId, request.body as CreateRecipeInput);
 
   response.status(201).json({
+    data: {
+      recipe,
+    },
+  });
+};
+
+export const publish: RequestHandler = async (request, response) => {
+  if (request.auth === undefined) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  const { recipeId } = request.validatedParams as RecipeIdParams;
+  const recipe = await publishRecipe(recipeId, request.auth);
+
+  response.status(200).json({
     data: {
       recipe,
     },

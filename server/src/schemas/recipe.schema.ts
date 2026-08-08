@@ -147,6 +147,15 @@ export const recipeSlugParamsSchema = z.strictObject({
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Recipe slug is invalid.'),
 });
 
+export const recipeIdParamsSchema = z.strictObject({
+  recipeId: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-f0-9]{24}$/, 'Recipe ID is invalid.'),
+});
+
 export type CreateRecipeInput = z.infer<typeof createRecipeInputSchema>;
 export type ListRecipesQuery = z.infer<typeof listRecipesQuerySchema>;
+export type RecipeIdParams = z.infer<typeof recipeIdParamsSchema>;
 export type RecipeSlugParams = z.infer<typeof recipeSlugParamsSchema>;

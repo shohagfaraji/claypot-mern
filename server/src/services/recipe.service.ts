@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { Types, type PipelineStage } from 'mongoose';
 import { AppError } from '../errors/app-error.js';
+import type { AccessTokenIdentity } from '../lib/access-token.js';
 import { createSlugBase } from '../lib/slug.js';
 import { RecipeModel, type Recipe } from '../models/recipe.model.js';
 import type { CreateRecipeInput, ListRecipesQuery } from '../schemas/recipe.schema.js';
@@ -295,4 +296,31 @@ export async function getPublishedRecipeBySlug(slug: string): Promise<RecipeDeta
   }
 
   return recipe;
+}
+
+export async function publishRecipe(
+  recipeId: string,
+  actor: AccessTokenIdentity,
+): Promise<PublicRecipe> {
+  const filter: Record<string, unknown> = {
+    _id: new Types.ObjectId(recipeId),
+  };
+
+  if (actor.role !== 'admin') {
+    filter.author = new Types.ObjectId(actor.userId);
+  }
+
+  const recipe = await RecipeModel.findOne(filter);
+
+  if (recipe === null) {
+    throw new AppError(404, 'RECIPE_NOT_FOUND', 'Recipe was not found.');
+  }
+
+  if (recipe.status !== 'published' || recipe.publishedAt === null) {
+    recipe.status = 'published';
+    recipe.publishedAt = new Date();
+    await recipe.save();
+  }
+
+  return toPublicRecipe(recipe);
 }

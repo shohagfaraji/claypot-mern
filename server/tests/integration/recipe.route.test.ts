@@ -6,11 +6,13 @@ const {
   createRecipeMock,
   getPublishedRecipeBySlugMock,
   listPublishedRecipesMock,
+  publishRecipeMock,
   verifyAccessTokenMock,
 } = vi.hoisted(() => ({
   createRecipeMock: vi.fn(),
   getPublishedRecipeBySlugMock: vi.fn(),
   listPublishedRecipesMock: vi.fn(),
+  publishRecipeMock: vi.fn(),
   verifyAccessTokenMock: vi.fn(),
 }));
 
@@ -35,6 +37,7 @@ vi.mock('../../src/services/recipe.service.js', () => ({
   createRecipe: createRecipeMock,
   getPublishedRecipeBySlug: getPublishedRecipeBySlugMock,
   listPublishedRecipes: listPublishedRecipesMock,
+  publishRecipe: publishRecipeMock,
 }));
 
 import { createApp } from '../../src/app.js';
@@ -323,5 +326,83 @@ describe('POST /api/v1/recipes', () => {
 
     expect(createRecipeMock).not.toHaveBeenCalled();
     expect(response.body.error.code).toBe('UNAUTHORIZED');
+  });
+});
+
+describe('PATCH /api/v1/recipes/:recipeId/publish', () => {
+  const app = createApp();
+  const recipeId = '507f1f77bcf86cd799439012';
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('publishes an owned recipe', async () => {
+    verifyAccessTokenMock.mockResolvedValue({
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+    publishRecipeMock.mockResolvedValue({
+      id: recipeId,
+      status: 'published',
+      publishedAt: new Date('2026-08-07T08:00:00.000Z'),
+    });
+
+    const response = await request(app)
+      .patch(`/api/v1/recipes/${recipeId}/publish`)
+      .set('Authorization', 'Bearer signed-access-token')
+      .expect(200);
+
+    expect(publishRecipeMock).toHaveBeenCalledWith(recipeId, {
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+    expect(response.body).toMatchObject({
+      data: {
+        recipe: {
+          id: recipeId,
+          status: 'published',
+        },
+      },
+    });
+  });
+
+  it('authenticates before validating the recipe ID', async () => {
+    const response = await request(app).patch('/api/v1/recipes/invalid-id/publish').expect(401);
+
+    expect(publishRecipeMock).not.toHaveBeenCalled();
+    expect(response.body.error.code).toBe('UNAUTHORIZED');
+  });
+
+  it('rejects an invalid recipe ID after authentication', async () => {
+    verifyAccessTokenMock.mockResolvedValue({
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+
+    const response = await request(app)
+      .patch('/api/v1/recipes/invalid-id/publish')
+      .set('Authorization', 'Bearer signed-access-token')
+      .expect(400);
+
+    expect(publishRecipeMock).not.toHaveBeenCalled();
+    expect(response.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('returns not found when the recipe is missing or not owned', async () => {
+    verifyAccessTokenMock.mockResolvedValue({
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+    publishRecipeMock.mockRejectedValue(
+      new AppError(404, 'RECIPE_NOT_FOUND', 'Recipe was not found.'),
+    );
+
+    const response = await request(app)
+      .patch(`/api/v1/recipes/${recipeId}/publish`)
+      .set('Authorization', 'Bearer signed-access-token')
+      .expect(404);
+
+    expect(response.body.error.code).toBe('RECIPE_NOT_FOUND');
   });
 });
