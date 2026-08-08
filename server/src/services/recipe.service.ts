@@ -4,7 +4,11 @@ import { AppError } from '../errors/app-error.js';
 import type { AccessTokenIdentity } from '../lib/access-token.js';
 import { createSlugBase } from '../lib/slug.js';
 import { RecipeModel, type Recipe } from '../models/recipe.model.js';
-import type { CreateRecipeInput, ListRecipesQuery } from '../schemas/recipe.schema.js';
+import type {
+  CreateRecipeInput,
+  ListOwnRecipesQuery,
+  ListRecipesQuery,
+} from '../schemas/recipe.schema.js';
 
 const maximumCreateAttempts = 3;
 
@@ -54,8 +58,37 @@ export interface PaginatedRecipes {
   };
 }
 
+export interface AuthorRecipeListItem {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string;
+  imageUrl: string | null;
+  prepTimeMinutes: number;
+  cookTimeMinutes: number;
+  totalTimeMinutes: number;
+  difficulty: Recipe['difficulty'];
+  cuisine: string;
+  category: string;
+  tags: string[];
+  status: Recipe['status'];
+  publishedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PaginatedAuthorRecipes {
+  items: AuthorRecipeListItem[];
+  pagination: PaginatedRecipes['pagination'];
+}
+
 interface RecipeListAggregation {
   items: RecipeListItem[];
+  metadata: Array<{ total: number }>;
+}
+
+interface AuthorRecipeListAggregation {
+  items: AuthorRecipeListItem[];
   metadata: Array<{ total: number }>;
 }
 
@@ -323,4 +356,85 @@ export async function publishRecipe(
   }
 
   return toPublicRecipe(recipe);
+}
+
+function getAuthorRecipeSort(sort: ListOwnRecipesQuery['sort']): Record<string, 1 | -1> {
+  const sorts: Record<ListOwnRecipesQuery['sort'], Record<string, 1 | -1>> = {
+    updated: { updatedAt: -1, _id: -1 },
+    newest: { createdAt: -1, _id: -1 },
+    oldest: { createdAt: 1, _id: 1 },
+  };
+
+  return sorts[sort];
+}
+
+export async function listAuthorRecipes(
+  authorId: string,
+  query: ListOwnRecipesQuery,
+): Promise<PaginatedAuthorRecipes> {
+  const match: Record<string, unknown> = {
+    author: new Types.ObjectId(authorId),
+  };
+
+  if (query.search !== undefined) {
+    match.$text = { $search: query.search };
+  }
+
+  if (query.status !== undefined) {
+    match.status = query.status;
+  }
+
+  const skip = (query.page - 1) * query.limit;
+  const pipeline: PipelineStage[] = [
+    { $match: match },
+    {
+      $addFields: {
+        totalTimeMinutes: { $add: ['$prepTimeMinutes', '$cookTimeMinutes'] },
+      },
+    },
+    { $sort: getAuthorRecipeSort(query.sort) },
+    {
+      $facet: {
+        items: [
+          { $skip: skip },
+          { $limit: query.limit },
+          {
+            $project: {
+              _id: 0,
+              id: { $toString: '$_id' },
+              title: 1,
+              slug: 1,
+              summary: 1,
+              imageUrl: 1,
+              prepTimeMinutes: 1,
+              cookTimeMinutes: 1,
+              totalTimeMinutes: 1,
+              difficulty: 1,
+              cuisine: 1,
+              category: 1,
+              tags: 1,
+              status: 1,
+              publishedAt: 1,
+              createdAt: 1,
+              updatedAt: 1,
+            },
+          },
+        ],
+        metadata: [{ $count: 'total' }],
+      },
+    },
+  ];
+  const [result] = await RecipeModel.aggregate<AuthorRecipeListAggregation>(pipeline);
+  const items = result?.items ?? [];
+  const total = result?.metadata[0]?.total ?? 0;
+
+  return {
+    items,
+    pagination: {
+      page: query.page,
+      limit: query.limit,
+      total,
+      totalPages: Math.ceil(total / query.limit),
+    },
+  };
 }

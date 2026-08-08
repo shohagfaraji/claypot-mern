@@ -1,9 +1,10 @@
 import { Router } from 'express';
-import { create, detail, list, publish } from '../controllers/recipe.controller.js';
+import { create, detail, list, mine, publish } from '../controllers/recipe.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { validateBody, validateParams, validateQuery } from '../middleware/validate-request.js';
 import {
   createRecipeInputSchema,
+  listOwnRecipesQuerySchema,
   listRecipesQuerySchema,
   recipeIdParamsSchema,
   recipeSlugParamsSchema,
@@ -12,6 +13,7 @@ import {
 export const recipeRouter = Router();
 
 recipeRouter.get('/', validateQuery(listRecipesQuerySchema), list);
+recipeRouter.get('/mine', authenticate, validateQuery(listOwnRecipesQuerySchema), mine);
 recipeRouter.get('/:slug', validateParams(recipeSlugParamsSchema), detail);
 recipeRouter.post('/', authenticate, validateBody(createRecipeInputSchema), create);
 recipeRouter.patch(

@@ -5,12 +5,14 @@ import { AppError } from '../../src/errors/app-error.js';
 const {
   createRecipeMock,
   getPublishedRecipeBySlugMock,
+  listAuthorRecipesMock,
   listPublishedRecipesMock,
   publishRecipeMock,
   verifyAccessTokenMock,
 } = vi.hoisted(() => ({
   createRecipeMock: vi.fn(),
   getPublishedRecipeBySlugMock: vi.fn(),
+  listAuthorRecipesMock: vi.fn(),
   listPublishedRecipesMock: vi.fn(),
   publishRecipeMock: vi.fn(),
   verifyAccessTokenMock: vi.fn(),
@@ -36,6 +38,7 @@ vi.mock('../../src/services/session.service.js', () => ({
 vi.mock('../../src/services/recipe.service.js', () => ({
   createRecipe: createRecipeMock,
   getPublishedRecipeBySlug: getPublishedRecipeBySlugMock,
+  listAuthorRecipes: listAuthorRecipesMock,
   listPublishedRecipes: listPublishedRecipesMock,
   publishRecipe: publishRecipeMock,
 }));
@@ -404,5 +407,93 @@ describe('PATCH /api/v1/recipes/:recipeId/publish', () => {
       .expect(404);
 
     expect(response.body.error.code).toBe('RECIPE_NOT_FOUND');
+  });
+});
+
+describe('GET /api/v1/recipes/mine', () => {
+  const app = createApp();
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('returns only the authenticated author recipes', async () => {
+    verifyAccessTokenMock.mockResolvedValue({
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+    listAuthorRecipesMock.mockResolvedValue({
+      items: [
+        {
+          id: 'recipe-id',
+          title: 'Spiced Claypot Rice',
+          slug: 'spiced-claypot-rice',
+          status: 'draft',
+          totalTimeMinutes: 55,
+        },
+      ],
+      pagination: {
+        page: 1,
+        limit: 6,
+        total: 1,
+        totalPages: 1,
+      },
+    });
+
+    const response = await request(app)
+      .get('/api/v1/recipes/mine')
+      .set('Authorization', 'Bearer signed-access-token')
+      .query({
+        limit: '6',
+        status: 'draft',
+        sort: 'updated',
+      })
+      .expect(200);
+
+    expect(listAuthorRecipesMock).toHaveBeenCalledWith('507f1f77bcf86cd799439011', {
+      page: 1,
+      limit: 6,
+      status: 'draft',
+      sort: 'updated',
+    });
+    expect(response.body).toMatchObject({
+      data: {
+        recipes: [
+          {
+            id: 'recipe-id',
+            status: 'draft',
+          },
+        ],
+        pagination: {
+          total: 1,
+          totalPages: 1,
+        },
+      },
+    });
+    expect(getPublishedRecipeBySlugMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects requests without authentication', async () => {
+    const response = await request(app).get('/api/v1/recipes/mine').expect(401);
+
+    expect(listAuthorRecipesMock).not.toHaveBeenCalled();
+    expect(getPublishedRecipeBySlugMock).not.toHaveBeenCalled();
+    expect(response.body.error.code).toBe('UNAUTHORIZED');
+  });
+
+  it('rejects invalid dashboard filters before querying MongoDB', async () => {
+    verifyAccessTokenMock.mockResolvedValue({
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+
+    const response = await request(app)
+      .get('/api/v1/recipes/mine')
+      .set('Authorization', 'Bearer signed-access-token')
+      .query({ status: 'archived' })
+      .expect(400);
+
+    expect(listAuthorRecipesMock).not.toHaveBeenCalled();
+    expect(response.body.error.code).toBe('VALIDATION_ERROR');
   });
 });

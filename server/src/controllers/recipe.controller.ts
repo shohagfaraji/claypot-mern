@@ -2,6 +2,7 @@ import type { RequestHandler } from 'express';
 import { AppError } from '../errors/app-error.js';
 import type {
   CreateRecipeInput,
+  ListOwnRecipesQuery,
   ListRecipesQuery,
   RecipeIdParams,
   RecipeSlugParams,
@@ -9,6 +10,7 @@ import type {
 import {
   createRecipe,
   getPublishedRecipeBySlug,
+  listAuthorRecipes,
   listPublishedRecipes,
   publishRecipe,
 } from '../services/recipe.service.js';
@@ -31,6 +33,24 @@ export const detail: RequestHandler = async (request, response) => {
   response.status(200).json({
     data: {
       recipe,
+    },
+  });
+};
+
+export const mine: RequestHandler = async (request, response) => {
+  if (request.auth === undefined) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  const result = await listAuthorRecipes(
+    request.auth.userId,
+    request.validatedQuery as ListOwnRecipesQuery,
+  );
+
+  response.status(200).json({
+    data: {
+      recipes: result.items,
+      pagination: result.pagination,
     },
   });
 };

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { recipeDifficulties } from '../models/recipe.model.js';
+import { recipeDifficulties, recipeStatuses } from '../models/recipe.model.js';
 
 const ingredientInputSchema = z.strictObject({
   name: z
@@ -137,6 +137,14 @@ export const listRecipesQuerySchema = z.strictObject({
   sort: z.enum(['newest', 'oldest', 'quickest']).default('newest'),
 });
 
+export const listOwnRecipesQuerySchema = z.strictObject({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(24).default(12),
+  search: searchSchema,
+  status: z.enum(recipeStatuses).optional(),
+  sort: z.enum(['updated', 'newest', 'oldest']).default('updated'),
+});
+
 export const recipeSlugParamsSchema = z.strictObject({
   slug: z
     .string()
@@ -156,6 +164,7 @@ export const recipeIdParamsSchema = z.strictObject({
 });
 
 export type CreateRecipeInput = z.infer<typeof createRecipeInputSchema>;
+export type ListOwnRecipesQuery = z.infer<typeof listOwnRecipesQuerySchema>;
 export type ListRecipesQuery = z.infer<typeof listRecipesQuerySchema>;
 export type RecipeIdParams = z.infer<typeof recipeIdParamsSchema>;
 export type RecipeSlugParams = z.infer<typeof recipeSlugParamsSchema>;
