@@ -1,7 +1,7 @@
 const footerLinks = [
-  { label: 'Discover', href: '#discover' },
-  { label: 'How it works', href: '#how-it-works' },
-  { label: 'Our story', href: '#our-story' },
+  { label: 'Discover', href: '/#discover' },
+  { label: 'How it works', href: '/#how-it-works' },
+  { label: 'Our story', href: '/#our-story' },
 ];
 
 export function SiteFooter() {
@@ -9,14 +9,14 @@ export function SiteFooter() {
     <footer id="our-story" className="border-t bg-card/45">
       <div className="mx-auto grid w-full max-w-7xl gap-8 px-5 py-10 sm:px-8 md:grid-cols-[1fr_auto] md:items-end lg:px-10">
         <div>
-          <a
+          <Link
             className="inline-flex items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-            href="/"
+            to="/"
             aria-label="Claypot home"
           >
             <img className="size-9 object-contain" src="/brand/claypot-logo.png" alt="" />
             <span className="text-lg font-bold tracking-[-0.035em]">Claypot</span>
-          </a>
+          </Link>
           <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
             A welcoming place for home cooks to preserve recipes, share their stories, and find
             something worth making.
@@ -43,3 +43,4 @@ export function SiteFooter() {
     </footer>
   );
 }
+import { Link } from 'react-router-dom';

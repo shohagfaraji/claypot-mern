@@ -1,12 +1,13 @@
 import { Menu, Search, X } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const navigation = [
-  { label: 'Discover', href: '#discover' },
-  { label: 'How it works', href: '#how-it-works' },
-  { label: 'Our story', href: '#our-story' },
+  { label: 'Discover', href: '/#discover' },
+  { label: 'How it works', href: '/#how-it-works' },
+  { label: 'Our story', href: '/#our-story' },
 ];
 
 export function SiteHeader() {
@@ -15,14 +16,14 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/90 backdrop-blur-xl">
       <div className="mx-auto flex h-18 w-full max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
-        <a
+        <Link
           className="flex items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-          href="/"
+          to="/"
           aria-label="Claypot home"
         >
           <img className="size-10 object-contain" src="/brand/claypot-logo.png" alt="" />
           <span className="text-xl font-bold tracking-[-0.035em]">Claypot</span>
-        </a>
+        </Link>
 
         <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary navigation">
           {navigation.map((item) => (
@@ -39,7 +40,7 @@ export function SiteHeader() {
         <div className="hidden items-center sm:flex">
           <a
             className={cn(buttonVariants({ size: 'lg' }), 'px-4 shadow-sm shadow-primary/15')}
-            href="#discover"
+            href="/#discover"
           >
             <Search />
             Explore recipes
@@ -75,7 +76,7 @@ export function SiteHeader() {
             <div className="mt-4 border-t pt-5">
               <a
                 className={cn(buttonVariants({ size: 'lg' }), 'w-full px-4')}
-                href="#discover"
+                href="/#discover"
                 onClick={() => setIsMenuOpen(false)}
               >
                 <Search />
