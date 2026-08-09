@@ -19,3 +19,10 @@ export interface LoginInput {
   identifier: string;
   password: string;
 }
+
+export interface RegisterInput {
+  name: string;
+  username: string;
+  email: string;
+  password: string;
+}

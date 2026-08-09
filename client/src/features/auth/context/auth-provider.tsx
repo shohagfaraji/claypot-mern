@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { AuthContext, type AuthStatus } from '@/features/auth/context/auth-context';
-import { getCurrentUser, login, refreshAccessToken } from '@/features/auth/api/auth';
-import type { AuthSession, AuthUser, LoginInput } from '@/features/auth/types';
+import { getCurrentUser, login, refreshAccessToken, register } from '@/features/auth/api/auth';
+import type { AuthSession, AuthUser, LoginInput, RegisterInput } from '@/features/auth/types';
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -62,7 +62,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return session;
   }
 
-  const value = useMemo(() => ({ ...state, signIn }), [state]);
+  async function signUp(input: RegisterInput) {
+    const session = await register(input);
+    sessionRestoreRequest = Promise.resolve(session);
+    setState({ ...session, status: 'authenticated' });
+
+    return session;
+  }
+
+  const value = useMemo(() => ({ ...state, signIn, signUp }), [state]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

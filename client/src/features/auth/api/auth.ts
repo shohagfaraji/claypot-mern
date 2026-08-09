@@ -1,7 +1,11 @@
-import type { AuthSession, AuthUser, LoginInput } from '@/features/auth/types';
+import type { AuthSession, AuthUser, LoginInput, RegisterInput } from '@/features/auth/types';
 import { apiRequest } from '@/lib/api-client';
 
 interface LoginResponse {
+  data: AuthSession;
+}
+
+interface RegisterResponse {
   data: AuthSession;
 }
 
@@ -19,6 +23,16 @@ interface CurrentUserResponse {
 
 export async function login(input: LoginInput) {
   const response = await apiRequest<LoginResponse>('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+
+  return response.data;
+}
+
+export async function register(input: RegisterInput) {
+  const response = await apiRequest<RegisterResponse>('/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
