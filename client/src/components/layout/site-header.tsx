@@ -5,7 +5,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const navigation = [
-  { label: 'Discover', href: '/#discover' },
+  { label: 'Discover', href: '/recipes' },
   { label: 'How it works', href: '/#how-it-works' },
   { label: 'Our story', href: '/#our-story' },
 ];
@@ -38,13 +38,13 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden items-center sm:flex">
-          <a
+          <Link
             className={cn(buttonVariants({ size: 'lg' }), 'px-4 shadow-sm shadow-primary/15')}
-            href="/#discover"
+            to="/recipes"
           >
             <Search />
             Explore recipes
-          </a>
+          </Link>
         </div>
 
         <Button
@@ -74,14 +74,14 @@ export function SiteHeader() {
               </a>
             ))}
             <div className="mt-4 border-t pt-5">
-              <a
+              <Link
                 className={cn(buttonVariants({ size: 'lg' }), 'w-full px-4')}
-                href="/#discover"
+                to="/recipes"
                 onClick={() => setIsMenuOpen(false)}
               >
                 <Search />
                 Explore recipes
-              </a>
+              </Link>
             </div>
           </nav>
         </div>

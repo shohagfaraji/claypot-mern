@@ -1,20 +1,16 @@
 import { apiRequest } from '@/lib/api-client';
-import type { RecipeListItem } from '@/features/recipes/types';
+import type { RecipeListData } from '@/features/recipes/types';
 
 interface GetRecipesResponse {
   data: {
-    recipes: RecipeListItem[];
-    pagination: {
-      page: number;
-      limit: number;
-      total: number;
-      totalPages: number;
-    };
+    recipes: RecipeListData['recipes'];
+    pagination: RecipeListData['pagination'];
   };
 }
 
-export async function getRecipes(signal?: AbortSignal) {
-  const response = await apiRequest<GetRecipesResponse>('/recipes?limit=3&sort=newest', { signal });
+export async function getRecipes(queryString: string, signal?: AbortSignal) {
+  const query = queryString.length > 0 ? `?${queryString}` : '';
+  const response = await apiRequest<GetRecipesResponse>(`/recipes${query}`, { signal });
 
   return response.data;
 }

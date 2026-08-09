@@ -21,3 +21,15 @@ export interface RecipeListItem {
     avatarUrl: string | null;
   };
 }
+
+export interface RecipePagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface RecipeListData {
+  recipes: RecipeListItem[];
+  pagination: RecipePagination;
+}

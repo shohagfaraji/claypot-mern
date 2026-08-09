@@ -1,4 +1,5 @@
 import { ArrowRight, BookOpen, Heart, Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import { AppShell } from '@/components/layout/app-shell';
 import { Badge } from '@/components/ui/badge';
@@ -27,16 +28,16 @@ export function HomePage() {
               cooks are making around the table.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-              <a
+              <Link
                 className={cn(
                   buttonVariants({ size: 'lg' }),
                   'h-11 px-5 text-base shadow-md shadow-primary/15',
                 )}
-                href="#discover"
+                to="/recipes"
               >
                 Explore recipes
                 <ArrowRight />
-              </a>
+              </Link>
               <a
                 className={cn(
                   buttonVariants({ variant: 'outline', size: 'lg' }),
@@ -104,6 +105,13 @@ export function HomePage() {
               people around your table.
             </p>
           </div>
+          <Link
+            className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'shrink-0')}
+            to="/recipes"
+          >
+            View all recipes
+            <ArrowRight />
+          </Link>
         </div>
         <FeaturedRecipes />
       </section>
