@@ -14,7 +14,7 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/90 backdrop-blur-xl">
-      <div className="mx-auto flex h-18 w-full max-w-320 items-center justify-between px-5 sm:px-8 lg:px-10">
+      <div className="mx-auto flex h-18 w-full max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
         <a
           className="flex items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           href="/"
@@ -61,7 +61,7 @@ export function SiteHeader() {
 
       {isMenuOpen && (
         <div id="mobile-navigation" className="border-t bg-background px-5 py-5 sm:hidden">
-          <nav className="mx-auto grid max-w-320 gap-1" aria-label="Mobile navigation">
+          <nav className="mx-auto grid max-w-7xl gap-1" aria-label="Mobile navigation">
             {navigation.map((item) => (
               <a
                 key={item.href}

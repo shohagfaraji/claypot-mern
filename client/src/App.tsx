@@ -2,6 +2,8 @@ import { Badge } from '@/components/ui/badge';
 import { AppShell } from '@/components/layout/app-shell';
 import { ArrowRight, BookOpen, Heart, Users } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
+import { RecipeCard } from '@/features/recipes/components/recipe-card';
+import { featuredRecipes } from '@/features/recipes/data/featured-recipes';
 import { cn } from '@/lib/utils';
 
 function App() {
@@ -9,7 +11,7 @@ function App() {
     <AppShell>
       <section className="relative overflow-hidden">
         <div className="absolute inset-x-0 top-0 -z-10 h-120 bg-[radial-gradient(circle_at_78%_22%,color-mix(in_oklch,var(--accent),transparent_35%),transparent_34%),radial-gradient(circle_at_18%_12%,color-mix(in_oklch,var(--secondary),transparent_20%),transparent_30%)]" />
-        <div className="mx-auto grid w-full max-w-320 gap-14 px-5 py-18 sm:px-8 sm:py-24 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:px-10 lg:py-28">
+        <div className="mx-auto grid w-full max-w-7xl gap-14 px-5 py-18 sm:px-8 sm:py-24 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:px-10 lg:py-28">
           <div>
             <Badge
               variant="outline"
@@ -66,7 +68,7 @@ function App() {
       </section>
 
       <section id="how-it-works" className="border-y bg-card/45">
-        <div className="mx-auto grid w-full max-w-320 gap-8 px-5 py-10 sm:grid-cols-3 sm:px-8 lg:px-10">
+        <div className="mx-auto grid w-full max-w-7xl gap-8 px-5 py-10 sm:grid-cols-3 sm:px-8 lg:px-10">
           {[
             { icon: BookOpen, value: 'Keep', label: 'Your trusted recipes together' },
             { icon: Heart, value: 'Share', label: 'Food and the stories behind it' },
@@ -87,7 +89,7 @@ function App() {
 
       <section
         id="discover"
-        className="mx-auto w-full max-w-320 px-5 py-18 sm:px-8 sm:py-24 lg:px-10"
+        className="mx-auto w-full max-w-7xl px-5 py-18 sm:px-8 sm:py-24 lg:px-10"
       >
         <p className="text-xs font-bold tracking-[0.14em] text-primary uppercase">
           Fresh from Claypot
@@ -102,6 +104,11 @@ function App() {
               people around your table.
             </p>
           </div>
+        </div>
+        <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {featuredRecipes.map((recipe) => (
+            <RecipeCard key={recipe.id} recipe={recipe} />
+          ))}
         </div>
       </section>
     </AppShell>

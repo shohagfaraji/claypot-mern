@@ -7,7 +7,7 @@ const footerLinks = [
 export function SiteFooter() {
   return (
     <footer id="our-story" className="border-t bg-card/45">
-      <div className="mx-auto grid w-full max-w-320 gap-8 px-5 py-10 sm:px-8 md:grid-cols-[1fr_auto] md:items-end lg:px-10">
+      <div className="mx-auto grid w-full max-w-7xl gap-8 px-5 py-10 sm:px-8 md:grid-cols-[1fr_auto] md:items-end lg:px-10">
         <div>
           <a
             className="inline-flex items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
