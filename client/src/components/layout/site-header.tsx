@@ -2,6 +2,7 @@ import { Menu, Search, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { cn } from '@/lib/utils';
 
 const navigation = [
@@ -12,6 +13,7 @@ const navigation = [
 
 export function SiteHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { status, user } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/90 backdrop-blur-xl">
@@ -37,7 +39,14 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <div className="hidden items-center sm:flex">
+        <div className="hidden items-center gap-2 sm:flex">
+          {status === 'authenticated' && user ? (
+            <span className="px-2 text-sm font-semibold">Hi, {user.name.split(' ')[0]}</span>
+          ) : status === 'unauthenticated' ? (
+            <Link className={buttonVariants({ variant: 'ghost', size: 'lg' })} to="/login">
+              Sign in
+            </Link>
+          ) : null}
           <Link
             className={cn(buttonVariants({ size: 'lg' }), 'px-4 shadow-sm shadow-primary/15')}
             to="/recipes"
@@ -74,6 +83,17 @@ export function SiteHeader() {
               </a>
             ))}
             <div className="mt-4 border-t pt-5">
+              {status === 'authenticated' && user ? (
+                <p className="mb-3 px-3 text-sm font-semibold">Signed in as {user.name}</p>
+              ) : status === 'unauthenticated' ? (
+                <Link
+                  className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'mb-3 w-full')}
+                  to="/login"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Sign in
+                </Link>
+              ) : null}
               <Link
                 className={cn(buttonVariants({ size: 'lg' }), 'w-full px-4')}
                 to="/recipes"
