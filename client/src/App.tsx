@@ -2,8 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { AppShell } from '@/components/layout/app-shell';
 import { ArrowRight, BookOpen, Heart, Users } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
-import { RecipeCard } from '@/features/recipes/components/recipe-card';
-import { featuredRecipes } from '@/features/recipes/data/featured-recipes';
+import { FeaturedRecipes } from '@/features/recipes/components/featured-recipes';
 import { cn } from '@/lib/utils';
 
 function App() {
@@ -105,11 +104,7 @@ function App() {
             </p>
           </div>
         </div>
-        <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {featuredRecipes.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} />
-          ))}
-        </div>
+        <FeaturedRecipes />
       </section>
     </AppShell>
   );
