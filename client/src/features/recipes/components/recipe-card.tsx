@@ -1,26 +1,23 @@
 import { Clock3 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import type { RecipeListItem } from '@/features/recipes/types';
+import { getInitials } from '@/features/recipes/lib/get-initials';
 
 interface RecipeCardProps {
   recipe: RecipeListItem;
 }
 
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-}
-
 export function RecipeCard({ recipe }: RecipeCardProps) {
   return (
     <Card className="group gap-0 overflow-hidden border-border/70 py-0 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/8">
-      <div className="relative aspect-[4/3] overflow-hidden bg-[radial-gradient(circle_at_72%_24%,color-mix(in_oklch,var(--accent),white_14%),transparent_32%),linear-gradient(145deg,var(--secondary),color-mix(in_oklch,var(--accent),white_48%))]">
+      <Link
+        className="relative block aspect-[4/3] overflow-hidden bg-[radial-gradient(circle_at_72%_24%,color-mix(in_oklch,var(--accent),white_14%),transparent_32%),linear-gradient(145deg,var(--secondary),color-mix(in_oklch,var(--accent),white_48%))] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+        to={`/recipes/${recipe.slug}`}
+        aria-label={`View ${recipe.title}`}
+      >
         {recipe.imageUrl ? (
           <img
             className="size-full object-cover transition duration-500 group-hover:scale-[1.03]"
@@ -40,7 +37,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         <Badge className="absolute top-4 left-4 bg-card/90 text-foreground shadow-sm backdrop-blur-sm">
           {recipe.category}
         </Badge>
-      </div>
+      </Link>
 
       <CardContent className="flex flex-1 flex-col p-5 sm:p-6">
         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
@@ -55,7 +52,12 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         </div>
 
         <h3 className="mt-3 font-serif text-2xl leading-tight font-medium tracking-[-0.025em]">
-          {recipe.title}
+          <Link
+            className="rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            to={`/recipes/${recipe.slug}`}
+          >
+            {recipe.title}
+          </Link>
         </h3>
         <p className="mt-3 line-clamp-2 text-sm leading-6 text-muted-foreground">
           {recipe.summary}

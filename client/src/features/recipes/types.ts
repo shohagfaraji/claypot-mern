@@ -33,3 +33,17 @@ export interface RecipeListData {
   recipes: RecipeListItem[];
   pagination: RecipePagination;
 }
+
+export interface RecipeDetail extends RecipeListItem {
+  ingredients: Array<{
+    name: string;
+    quantity: string;
+  }>;
+  instructions: Array<{
+    step: number;
+    description: string;
+  }>;
+  servings: number;
+  createdAt: string;
+  updatedAt: string;
+}
