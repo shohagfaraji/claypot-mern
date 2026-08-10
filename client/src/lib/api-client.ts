@@ -23,13 +23,13 @@ export class ApiError extends Error {
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  if (!headers.has('Accept')) headers.set('Accept', 'application/json');
+
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
     credentials: 'include',
-    headers: {
-      Accept: 'application/json',
-      ...init?.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {

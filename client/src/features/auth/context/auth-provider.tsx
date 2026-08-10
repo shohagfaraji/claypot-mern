@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { AuthContext, type AuthStatus } from '@/features/auth/context/auth-context';
 import {
@@ -41,6 +41,7 @@ function restoreSession() {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [state, setState] = useState(initialState);
+  const tokenRenewalRequest = useRef<Promise<string> | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -60,29 +61,51 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
   }, []);
 
-  async function signIn(input: LoginInput) {
+  const signIn = useCallback(async (input: LoginInput) => {
     const session = await login(input);
     sessionRestoreRequest = Promise.resolve(session);
     setState({ ...session, status: 'authenticated' });
 
     return session;
-  }
+  }, []);
 
-  async function signUp(input: RegisterInput) {
+  const signUp = useCallback(async (input: RegisterInput) => {
     const session = await register(input);
     sessionRestoreRequest = Promise.resolve(session);
     setState({ ...session, status: 'authenticated' });
 
     return session;
-  }
+  }, []);
 
-  async function signOut() {
+  const signOut = useCallback(async () => {
     await logout();
     sessionRestoreRequest = null;
     setState({ user: null, accessToken: null, status: 'unauthenticated' });
-  }
+  }, []);
 
-  const value = useMemo(() => ({ ...state, signIn, signUp, signOut }), [state]);
+  const renewAccessToken = useCallback(async () => {
+    tokenRenewalRequest.current ??= refreshAccessToken()
+      .then((accessToken) => {
+        sessionRestoreRequest = null;
+        setState((current) => ({ ...current, accessToken }));
+        return accessToken;
+      })
+      .catch((error: unknown) => {
+        sessionRestoreRequest = null;
+        setState({ user: null, accessToken: null, status: 'unauthenticated' });
+        throw error;
+      })
+      .finally(() => {
+        tokenRenewalRequest.current = null;
+      });
+
+    return tokenRenewalRequest.current;
+  }, []);
+
+  const value = useMemo(
+    () => ({ ...state, signIn, signUp, signOut, renewAccessToken }),
+    [renewAccessToken, signIn, signOut, signUp, state],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

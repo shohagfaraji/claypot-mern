@@ -1,5 +1,5 @@
 import { AtSign, Eye, EyeOff, LoaderCircle, LockKeyhole, Mail, UserRound } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ export function RegisterPage() {
     return <Navigate to="/" replace />;
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
 

@@ -1,5 +1,5 @@
 import { Search, SlidersHorizontal } from 'lucide-react';
-import type { FormEvent } from 'react';
+import type { SubmitEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { AppShell } from '@/components/layout/app-shell';
@@ -51,7 +51,7 @@ export function RecipesPage() {
     });
   }
 
-  function handleSearch(event: FormEvent<HTMLFormElement>) {
+  function handleSearch(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const value = String(formData.get('search') ?? '').trim();

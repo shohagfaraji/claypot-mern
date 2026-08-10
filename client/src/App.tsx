@@ -4,6 +4,7 @@ import { ProtectedRoute } from '@/features/auth/components/protected-route';
 import { AccountPage } from '@/pages/account-page';
 import { HomePage } from '@/pages/home-page';
 import { LoginPage } from '@/pages/login-page';
+import { MyRecipesPage } from '@/pages/my-recipes-page';
 import { NotFoundPage } from '@/pages/not-found-page';
 import { RecipeDetailPage } from '@/pages/recipe-detail-page';
 import { RecipesPage } from '@/pages/recipes-page';
@@ -19,6 +20,7 @@ function App() {
       <Route path="recipes/:slug" element={<RecipeDetailPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path="account" element={<AccountPage />} />
+        <Route path="my-recipes" element={<MyRecipesPage />} />
       </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

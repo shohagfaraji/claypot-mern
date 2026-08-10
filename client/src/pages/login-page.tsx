@@ -1,5 +1,5 @@
 import { Eye, EyeOff, LoaderCircle, LockKeyhole, UserRound } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
@@ -36,7 +36,7 @@ export function LoginPage() {
     return <Navigate to={redirectPath} replace />;
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const identifier = String(formData.get('identifier') ?? '').trim();

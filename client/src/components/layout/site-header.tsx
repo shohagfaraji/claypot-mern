@@ -1,4 +1,4 @@
-import { Menu, Search, UserRound, X } from 'lucide-react';
+import { BookOpen, Menu, Search, UserRound, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -41,10 +41,16 @@ export function SiteHeader() {
 
         <div className="hidden items-center gap-2 sm:flex">
           {status === 'authenticated' && user ? (
-            <Link className={buttonVariants({ variant: 'ghost', size: 'lg' })} to="/account">
-              <UserRound />
-              {user.name.split(' ')[0]}
-            </Link>
+            <>
+              <Link className={buttonVariants({ variant: 'ghost', size: 'lg' })} to="/my-recipes">
+                <BookOpen />
+                My recipes
+              </Link>
+              <Link className={buttonVariants({ variant: 'ghost', size: 'lg' })} to="/account">
+                <UserRound />
+                {user.name.split(' ')[0]}
+              </Link>
+            </>
           ) : status === 'unauthenticated' ? (
             <Link className={buttonVariants({ variant: 'ghost', size: 'lg' })} to="/login">
               Sign in
@@ -87,14 +93,24 @@ export function SiteHeader() {
             ))}
             <div className="mt-4 border-t pt-5">
               {status === 'authenticated' && user ? (
-                <Link
-                  className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'mb-3 w-full')}
-                  to="/account"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <UserRound />
-                  Your account
-                </Link>
+                <div className="mb-3 grid gap-2">
+                  <Link
+                    className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}
+                    to="/my-recipes"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <BookOpen />
+                    My recipes
+                  </Link>
+                  <Link
+                    className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}
+                    to="/account"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <UserRound />
+                    Your account
+                  </Link>
+                </div>
               ) : status === 'unauthenticated' ? (
                 <Link
                   className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'mb-3 w-full')}

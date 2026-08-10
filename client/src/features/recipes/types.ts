@@ -47,3 +47,27 @@ export interface RecipeDetail extends RecipeListItem {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface AuthorRecipeListItem {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string;
+  imageUrl: string | null;
+  prepTimeMinutes: number;
+  cookTimeMinutes: number;
+  totalTimeMinutes: number;
+  difficulty: RecipeDifficulty;
+  cuisine: string;
+  category: string;
+  tags: string[];
+  status: 'draft' | 'published';
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuthorRecipeListData {
+  recipes: AuthorRecipeListItem[];
+  pagination: RecipePagination;
+}
