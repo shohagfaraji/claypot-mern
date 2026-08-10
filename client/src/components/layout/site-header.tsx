@@ -1,4 +1,4 @@
-import { Menu, Search, X } from 'lucide-react';
+import { Menu, Search, UserRound, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -41,7 +41,10 @@ export function SiteHeader() {
 
         <div className="hidden items-center gap-2 sm:flex">
           {status === 'authenticated' && user ? (
-            <span className="px-2 text-sm font-semibold">Hi, {user.name.split(' ')[0]}</span>
+            <Link className={buttonVariants({ variant: 'ghost', size: 'lg' })} to="/account">
+              <UserRound />
+              {user.name.split(' ')[0]}
+            </Link>
           ) : status === 'unauthenticated' ? (
             <Link className={buttonVariants({ variant: 'ghost', size: 'lg' })} to="/login">
               Sign in
@@ -84,7 +87,14 @@ export function SiteHeader() {
             ))}
             <div className="mt-4 border-t pt-5">
               {status === 'authenticated' && user ? (
-                <p className="mb-3 px-3 text-sm font-semibold">Signed in as {user.name}</p>
+                <Link
+                  className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'mb-3 w-full')}
+                  to="/account"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <UserRound />
+                  Your account
+                </Link>
               ) : status === 'unauthenticated' ? (
                 <Link
                   className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'mb-3 w-full')}

@@ -54,3 +54,7 @@ export async function getCurrentUser(accessToken: string) {
 
   return response.data.user;
 }
+
+export async function logout() {
+  await apiRequest<void>('/auth/logout', { method: 'POST' });
+}

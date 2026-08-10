@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import type { RecipeListItem } from '@/features/recipes/types';
-import { getInitials } from '@/features/recipes/lib/get-initials';
+import { getInitials } from '@/lib/get-initials';
 
 interface RecipeCardProps {
   recipe: RecipeListItem;

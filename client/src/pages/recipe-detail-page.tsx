@@ -5,8 +5,8 @@ import { AppShell } from '@/components/layout/app-shell';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getInitials } from '@/features/recipes/lib/get-initials';
 import { useRecipe } from '@/features/recipes/hooks/use-recipe';
+import { getInitials } from '@/lib/get-initials';
 import { cn } from '@/lib/utils';
 import { NotFoundPage } from '@/pages/not-found-page';
 
