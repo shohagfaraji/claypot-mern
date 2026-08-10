@@ -1,9 +1,9 @@
-import { BookOpen, RefreshCw, Search } from 'lucide-react';
+import { BookOpen, CheckCircle2, Plus, RefreshCw, Search } from 'lucide-react';
 import { useState, type SubmitEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 
 import { AppShell } from '@/components/layout/app-shell';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -17,6 +17,7 @@ import { useAuthenticatedRequest } from '@/features/auth/hooks/use-authenticated
 import { publishRecipe } from '@/features/recipes/api/publish-recipe';
 import { AuthorRecipeCard } from '@/features/recipes/components/author-recipe-card';
 import { useAuthorRecipes } from '@/features/recipes/hooks/use-author-recipes';
+import { cn } from '@/lib/utils';
 
 const statuses = ['draft', 'published'] as const;
 const sorts = ['updated', 'newest', 'oldest'] as const;
@@ -46,6 +47,7 @@ function RecipeDashboardSkeleton() {
 
 export function MyRecipesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const request = useAuthenticatedRequest();
   const search = searchParams.get('search')?.trim() ?? '';
   const statusParam = searchParams.get('status');
@@ -110,18 +112,40 @@ export function MyRecipesPage() {
   return (
     <AppShell>
       <section className="border-b bg-card/45">
-        <div className="mx-auto w-full max-w-7xl px-5 py-12 sm:px-8 sm:py-16 lg:px-10">
-          <p className="text-xs font-bold tracking-[0.14em] text-primary uppercase">Your kitchen</p>
-          <h1 className="mt-3 font-serif text-5xl font-medium tracking-[-0.045em] sm:text-6xl">
-            My recipes
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-            Keep track of your drafts and manage the recipes you have shared with the community.
-          </p>
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-5 py-12 sm:px-8 sm:py-16 md:flex-row md:items-end md:justify-between lg:px-10">
+          <div>
+            <p className="text-xs font-bold tracking-[0.14em] text-primary uppercase">
+              Your kitchen
+            </p>
+            <h1 className="mt-3 font-serif text-5xl font-medium tracking-[-0.045em] sm:text-6xl">
+              My recipes
+            </h1>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
+              Keep track of your drafts and manage the recipes you have shared with the community.
+            </p>
+          </div>
+          <Link
+            className={cn(buttonVariants({ size: 'lg' }), 'h-11 shrink-0 px-5')}
+            to="/recipes/new"
+          >
+            <Plus />
+            New recipe
+          </Link>
         </div>
       </section>
 
       <section className="mx-auto w-full max-w-7xl px-5 py-10 sm:px-8 lg:px-10">
+        {location.state?.recipeCreated === true && (
+          <div className="mb-6 flex items-start gap-3 rounded-xl border border-primary/20 bg-secondary/55 px-4 py-3 text-sm">
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
+            <div>
+              <p className="font-semibold">Recipe saved as a draft</p>
+              <p className="mt-0.5 text-muted-foreground">
+                Review it below and publish when it is ready.
+              </p>
+            </div>
+          </div>
+        )}
         <div className="rounded-2xl border bg-card p-4 shadow-sm sm:p-5">
           <div className="grid gap-3 lg:grid-cols-[1fr_11rem_11rem_auto]">
             <form key={search} className="relative flex gap-2" onSubmit={handleSearch}>
@@ -220,6 +244,12 @@ export function MyRecipesPage() {
                   ? 'Try changing your search or filters.'
                   : 'Recipes you create will be saved here as drafts until you publish them.'}
               </p>
+              {!hasFilters && (
+                <Link className={cn(buttonVariants(), 'mt-5')} to="/recipes/new">
+                  <Plus />
+                  Create your first recipe
+                </Link>
+              )}
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

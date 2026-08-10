@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom';
 
 import { ProtectedRoute } from '@/features/auth/components/protected-route';
 import { AccountPage } from '@/pages/account-page';
+import { CreateRecipePage } from '@/pages/create-recipe-page';
 import { HomePage } from '@/pages/home-page';
 import { LoginPage } from '@/pages/login-page';
 import { MyRecipesPage } from '@/pages/my-recipes-page';
@@ -21,6 +22,7 @@ function App() {
       <Route element={<ProtectedRoute />}>
         <Route path="account" element={<AccountPage />} />
         <Route path="my-recipes" element={<MyRecipesPage />} />
+        <Route path="recipes/new" element={<CreateRecipePage />} />
       </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

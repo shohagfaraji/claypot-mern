@@ -71,3 +71,23 @@ export interface AuthorRecipeListData {
   recipes: AuthorRecipeListItem[];
   pagination: RecipePagination;
 }
+
+export interface CreateRecipeInput {
+  title: string;
+  summary: string;
+  imageUrl?: string;
+  ingredients: Array<{
+    name: string;
+    quantity: string;
+  }>;
+  instructions: Array<{
+    description: string;
+  }>;
+  prepTimeMinutes: number;
+  cookTimeMinutes: number;
+  servings: number;
+  difficulty: RecipeDifficulty;
+  cuisine: string;
+  category: string;
+  tags: string[];
+}
