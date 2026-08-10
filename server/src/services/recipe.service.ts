@@ -335,15 +335,7 @@ export async function publishRecipe(
   recipeId: string,
   actor: AccessTokenIdentity,
 ): Promise<PublicRecipe> {
-  const filter: Record<string, unknown> = {
-    _id: new Types.ObjectId(recipeId),
-  };
-
-  if (actor.role !== 'admin') {
-    filter.author = new Types.ObjectId(actor.userId);
-  }
-
-  const recipe = await RecipeModel.findOne(filter);
+  const recipe = await RecipeModel.findOne(getOwnedRecipeFilter(recipeId, actor));
 
   if (recipe === null) {
     throw new AppError(404, 'RECIPE_NOT_FOUND', 'Recipe was not found.');
@@ -354,6 +346,62 @@ export async function publishRecipe(
     recipe.publishedAt = new Date();
     await recipe.save();
   }
+
+  return toPublicRecipe(recipe);
+}
+
+function getOwnedRecipeFilter(recipeId: string, actor: AccessTokenIdentity) {
+  const filter: Record<string, unknown> = {
+    _id: new Types.ObjectId(recipeId),
+  };
+
+  if (actor.role !== 'admin') {
+    filter.author = new Types.ObjectId(actor.userId);
+  }
+
+  return filter;
+}
+
+export async function getAuthorRecipe(
+  recipeId: string,
+  actor: AccessTokenIdentity,
+): Promise<PublicRecipe> {
+  const recipe = await RecipeModel.findOne(getOwnedRecipeFilter(recipeId, actor));
+
+  if (recipe === null) {
+    throw new AppError(404, 'RECIPE_NOT_FOUND', 'Recipe was not found.');
+  }
+
+  return toPublicRecipe(recipe);
+}
+
+export async function updateRecipe(
+  recipeId: string,
+  actor: AccessTokenIdentity,
+  input: CreateRecipeInput,
+): Promise<PublicRecipe> {
+  const recipe = await RecipeModel.findOne(getOwnedRecipeFilter(recipeId, actor));
+
+  if (recipe === null) {
+    throw new AppError(404, 'RECIPE_NOT_FOUND', 'Recipe was not found.');
+  }
+
+  recipe.title = input.title;
+  recipe.summary = input.summary;
+  recipe.imageUrl = input.imageUrl ?? null;
+  recipe.ingredients = input.ingredients;
+  recipe.instructions = input.instructions.map((instruction, index) => ({
+    step: index + 1,
+    description: instruction.description,
+  }));
+  recipe.prepTimeMinutes = input.prepTimeMinutes;
+  recipe.cookTimeMinutes = input.cookTimeMinutes;
+  recipe.servings = input.servings;
+  recipe.difficulty = input.difficulty;
+  recipe.cuisine = input.cuisine;
+  recipe.category = input.category;
+  recipe.tags = input.tags;
+  await recipe.save();
 
   return toPublicRecipe(recipe);
 }

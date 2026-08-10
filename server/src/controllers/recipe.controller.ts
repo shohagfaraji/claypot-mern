@@ -9,10 +9,12 @@ import type {
 } from '../schemas/recipe.schema.js';
 import {
   createRecipe,
+  getAuthorRecipe,
   getPublishedRecipeBySlug,
   listAuthorRecipes,
   listPublishedRecipes,
   publishRecipe,
+  updateRecipe,
 } from '../services/recipe.service.js';
 
 export const list: RequestHandler = async (request, response) => {
@@ -55,6 +57,21 @@ export const mine: RequestHandler = async (request, response) => {
   });
 };
 
+export const mineDetail: RequestHandler = async (request, response) => {
+  if (request.auth === undefined) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  const { recipeId } = request.validatedParams as RecipeIdParams;
+  const recipe = await getAuthorRecipe(recipeId, request.auth);
+
+  response.status(200).json({
+    data: {
+      recipe,
+    },
+  });
+};
+
 export const create: RequestHandler = async (request, response) => {
   if (request.auth === undefined) {
     throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
@@ -76,6 +93,21 @@ export const publish: RequestHandler = async (request, response) => {
 
   const { recipeId } = request.validatedParams as RecipeIdParams;
   const recipe = await publishRecipe(recipeId, request.auth);
+
+  response.status(200).json({
+    data: {
+      recipe,
+    },
+  });
+};
+
+export const update: RequestHandler = async (request, response) => {
+  if (request.auth === undefined) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  const { recipeId } = request.validatedParams as RecipeIdParams;
+  const recipe = await updateRecipe(recipeId, request.auth, request.body as CreateRecipeInput);
 
   response.status(200).json({
     data: {

@@ -4,17 +4,21 @@ import { AppError } from '../../src/errors/app-error.js';
 
 const {
   createRecipeMock,
+  getAuthorRecipeMock,
   getPublishedRecipeBySlugMock,
   listAuthorRecipesMock,
   listPublishedRecipesMock,
   publishRecipeMock,
+  updateRecipeMock,
   verifyAccessTokenMock,
 } = vi.hoisted(() => ({
   createRecipeMock: vi.fn(),
+  getAuthorRecipeMock: vi.fn(),
   getPublishedRecipeBySlugMock: vi.fn(),
   listAuthorRecipesMock: vi.fn(),
   listPublishedRecipesMock: vi.fn(),
   publishRecipeMock: vi.fn(),
+  updateRecipeMock: vi.fn(),
   verifyAccessTokenMock: vi.fn(),
 }));
 
@@ -37,10 +41,12 @@ vi.mock('../../src/services/session.service.js', () => ({
 
 vi.mock('../../src/services/recipe.service.js', () => ({
   createRecipe: createRecipeMock,
+  getAuthorRecipe: getAuthorRecipeMock,
   getPublishedRecipeBySlug: getPublishedRecipeBySlugMock,
   listAuthorRecipes: listAuthorRecipesMock,
   listPublishedRecipes: listPublishedRecipesMock,
   publishRecipe: publishRecipeMock,
+  updateRecipe: updateRecipeMock,
 }));
 
 import { createApp } from '../../src/app.js';
@@ -495,5 +501,140 @@ describe('GET /api/v1/recipes/mine', () => {
 
     expect(listAuthorRecipesMock).not.toHaveBeenCalled();
     expect(response.body.error.code).toBe('VALIDATION_ERROR');
+  });
+});
+
+describe('GET /api/v1/recipes/mine/:recipeId', () => {
+  const app = createApp();
+  const recipeId = '507f1f77bcf86cd799439012';
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('returns a complete recipe owned by the authenticated author', async () => {
+    verifyAccessTokenMock.mockResolvedValue({
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+    getAuthorRecipeMock.mockResolvedValue({
+      id: recipeId,
+      title: 'Spiced Claypot Rice',
+      slug: 'spiced-claypot-rice',
+      status: 'draft',
+      ingredients: [{ name: 'Basmati rice', quantity: '2 cups' }],
+      instructions: [{ step: 1, description: 'Rinse the rice thoroughly.' }],
+    });
+
+    const response = await request(app)
+      .get(`/api/v1/recipes/mine/${recipeId}`)
+      .set('Authorization', 'Bearer signed-access-token')
+      .expect(200);
+
+    expect(getAuthorRecipeMock).toHaveBeenCalledWith(recipeId, {
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+    expect(response.body).toMatchObject({
+      data: {
+        recipe: {
+          id: recipeId,
+          status: 'draft',
+          ingredients: expect.any(Array),
+          instructions: expect.any(Array),
+        },
+      },
+    });
+  });
+
+  it('authenticates before validating the recipe identifier', async () => {
+    const response = await request(app).get('/api/v1/recipes/mine/invalid-id').expect(401);
+
+    expect(getAuthorRecipeMock).not.toHaveBeenCalled();
+    expect(response.body.error.code).toBe('UNAUTHORIZED');
+  });
+});
+
+describe('PUT /api/v1/recipes/:recipeId', () => {
+  const app = createApp();
+  const recipeId = '507f1f77bcf86cd799439012';
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('updates a recipe owned by the authenticated author', async () => {
+    verifyAccessTokenMock.mockResolvedValue({
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+    updateRecipeMock.mockResolvedValue({
+      id: recipeId,
+      slug: 'spiced-claypot-rice',
+      status: 'draft',
+      ...recipeBody,
+    });
+
+    const response = await request(app)
+      .put(`/api/v1/recipes/${recipeId}`)
+      .set('Authorization', 'Bearer signed-access-token')
+      .send(recipeBody)
+      .expect(200);
+
+    expect(updateRecipeMock).toHaveBeenCalledWith(
+      recipeId,
+      {
+        userId: '507f1f77bcf86cd799439011',
+        role: 'user',
+      },
+      {
+        title: 'Spiced Claypot Rice',
+        summary: 'A comforting rice dish cooked with warming spices.',
+        ingredients: [{ name: 'Basmati rice', quantity: '2 cups' }],
+        instructions: [{ description: 'Rinse the rice until the water runs clear.' }],
+        prepTimeMinutes: 15,
+        cookTimeMinutes: 40,
+        servings: 4,
+        difficulty: 'medium',
+        cuisine: 'South Asian',
+        category: 'Main course',
+        tags: ['rice', 'comfort food'],
+      },
+    );
+    expect(response.body.data.recipe.id).toBe(recipeId);
+  });
+
+  it('rejects invalid updates before calling the recipe service', async () => {
+    verifyAccessTokenMock.mockResolvedValue({
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+
+    const response = await request(app)
+      .put(`/api/v1/recipes/${recipeId}`)
+      .set('Authorization', 'Bearer signed-access-token')
+      .send({ ...recipeBody, instructions: [] })
+      .expect(400);
+
+    expect(updateRecipeMock).not.toHaveBeenCalled();
+    expect(response.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('returns not found without revealing recipe ownership', async () => {
+    verifyAccessTokenMock.mockResolvedValue({
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+    updateRecipeMock.mockRejectedValue(
+      new AppError(404, 'RECIPE_NOT_FOUND', 'Recipe was not found.'),
+    );
+
+    const response = await request(app)
+      .put(`/api/v1/recipes/${recipeId}`)
+      .set('Authorization', 'Bearer signed-access-token')
+      .send(recipeBody)
+      .expect(404);
+
+    expect(response.body.error.code).toBe('RECIPE_NOT_FOUND');
   });
 });
