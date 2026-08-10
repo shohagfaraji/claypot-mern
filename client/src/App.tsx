@@ -23,6 +23,7 @@ function App() {
         <Route path="account" element={<AccountPage />} />
         <Route path="my-recipes" element={<MyRecipesPage />} />
         <Route path="recipes/new" element={<CreateRecipePage />} />
+        <Route path="my-recipes/:recipeId/edit" element={<CreateRecipePage />} />
       </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

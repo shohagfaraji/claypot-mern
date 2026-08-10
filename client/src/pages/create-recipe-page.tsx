@@ -1,6 +1,6 @@
-import { ArrowLeft, Clock3, LoaderCircle, Plus, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, Clock3, LoaderCircle, Plus, RefreshCw, Save, Trash2 } from 'lucide-react';
 import { useState, type SubmitEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { AppShell } from '@/components/layout/app-shell';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -15,10 +15,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthenticatedRequest } from '@/features/auth/hooks/use-authenticated-request';
 import { createRecipe } from '@/features/recipes/api/create-recipe';
-import type { RecipeDifficulty } from '@/features/recipes/types';
+import { updateRecipe } from '@/features/recipes/api/update-recipe';
+import { useAuthorRecipe } from '@/features/recipes/hooks/use-author-recipe';
+import type {
+  AuthorRecipeDetail,
+  CreateRecipeInput,
+  RecipeDifficulty,
+} from '@/features/recipes/types';
 import { cn } from '@/lib/utils';
+import { NotFoundPage } from '@/pages/not-found-page';
 
 interface IngredientField {
   id: string;
@@ -39,14 +47,30 @@ function createInstruction(): InstructionField {
   return { id: crypto.randomUUID(), description: '' };
 }
 
-export function CreateRecipePage() {
+interface RecipeFormProps {
+  recipe: AuthorRecipeDetail | null;
+}
+
+function RecipeForm({ recipe }: RecipeFormProps) {
   const navigate = useNavigate();
   const request = useAuthenticatedRequest();
-  const [ingredients, setIngredients] = useState<IngredientField[]>([createIngredient()]);
-  const [instructions, setInstructions] = useState<InstructionField[]>([createInstruction()]);
-  const [difficulty, setDifficulty] = useState<RecipeDifficulty>('easy');
+  const [ingredients, setIngredients] = useState<IngredientField[]>(() =>
+    recipe
+      ? recipe.ingredients.map((ingredient) => ({ ...ingredient, id: crypto.randomUUID() }))
+      : [createIngredient()],
+  );
+  const [instructions, setInstructions] = useState<InstructionField[]>(() =>
+    recipe
+      ? recipe.instructions.map((instruction) => ({
+          id: crypto.randomUUID(),
+          description: instruction.description,
+        }))
+      : [createInstruction()],
+  );
+  const [difficulty, setDifficulty] = useState<RecipeDifficulty>(recipe?.difficulty ?? 'easy');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isEditing = recipe !== null;
 
   function updateIngredient(id: string, field: 'name' | 'quantity', value: string) {
     setIngredients((current) =>
@@ -86,7 +110,7 @@ export function CreateRecipePage() {
     setIsSubmitting(true);
 
     try {
-      await createRecipe(request, {
+      const input: CreateRecipeInput = {
         title: String(formData.get('title') ?? '').trim(),
         summary: String(formData.get('summary') ?? '').trim(),
         ...(imageUrl ? { imageUrl } : {}),
@@ -104,12 +128,19 @@ export function CreateRecipePage() {
         cuisine: String(formData.get('cuisine') ?? '').trim(),
         category: String(formData.get('category') ?? '').trim(),
         tags,
+      };
+
+      if (recipe) await updateRecipe(request, recipe.id, input);
+      else await createRecipe(request, input);
+
+      navigate('/my-recipes', {
+        replace: true,
+        state: isEditing ? { recipeUpdated: true } : { recipeCreated: true },
       });
-      navigate('/my-recipes', { replace: true, state: { recipeCreated: true } });
-    } catch (createRecipeError) {
+    } catch (saveRecipeError) {
       setError(
-        createRecipeError instanceof Error
-          ? createRecipeError.message
+        saveRecipeError instanceof Error
+          ? saveRecipeError.message
           : 'The recipe could not be saved.',
       );
       setIsSubmitting(false);
@@ -128,14 +159,17 @@ export function CreateRecipePage() {
             Back to my recipes
           </Link>
           <p className="mt-7 text-xs font-bold tracking-[0.14em] text-primary uppercase">
-            New recipe
+            {isEditing ? 'Edit recipe' : 'New recipe'}
           </p>
           <h1 className="mt-3 font-serif text-5xl font-medium tracking-[-0.045em] sm:text-6xl">
-            Add something delicious
+            {isEditing ? 'Refine your recipe' : 'Add something delicious'}
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-            Capture the ingredients, timings, and steps now. Your recipe will remain a private draft
-            until you choose to publish it.
+            {isEditing
+              ? recipe.status === 'published'
+                ? 'Update the details carefully. Saved changes will appear on the published recipe immediately.'
+                : 'Update the ingredients, timings, and steps while this recipe remains a private draft.'
+              : 'Capture the ingredients, timings, and steps now. Your recipe will remain a private draft until you choose to publish it.'}
           </p>
         </div>
       </section>
@@ -159,6 +193,7 @@ export function CreateRecipePage() {
                   id="title"
                   className="h-11"
                   name="title"
+                  defaultValue={recipe?.title}
                   minLength={3}
                   maxLength={120}
                   placeholder="Spiced claypot rice"
@@ -172,6 +207,7 @@ export function CreateRecipePage() {
                   id="summary"
                   className="min-h-28 resize-y"
                   name="summary"
+                  defaultValue={recipe?.summary}
                   minLength={10}
                   maxLength={300}
                   placeholder="What makes this recipe worth cooking?"
@@ -187,6 +223,7 @@ export function CreateRecipePage() {
                   className="h-11"
                   name="imageUrl"
                   type="url"
+                  defaultValue={recipe?.imageUrl ?? ''}
                   maxLength={2048}
                   placeholder="https://example.com/recipe.jpg"
                   disabled={isSubmitting}
@@ -362,7 +399,7 @@ export function CreateRecipePage() {
                     min={0}
                     max={1440}
                     step={1}
-                    defaultValue={15}
+                    defaultValue={recipe?.prepTimeMinutes ?? 15}
                     required
                     disabled={isSubmitting}
                   />
@@ -376,7 +413,7 @@ export function CreateRecipePage() {
                     min={0}
                     max={1440}
                     step={1}
-                    defaultValue={30}
+                    defaultValue={recipe?.cookTimeMinutes ?? 30}
                     required
                     disabled={isSubmitting}
                   />
@@ -393,7 +430,7 @@ export function CreateRecipePage() {
                     min={1}
                     max={100}
                     step={1}
-                    defaultValue={4}
+                    defaultValue={recipe?.servings ?? 4}
                     required
                     disabled={isSubmitting}
                   />
@@ -422,6 +459,7 @@ export function CreateRecipePage() {
                 <Input
                   id="cuisine"
                   name="cuisine"
+                  defaultValue={recipe?.cuisine}
                   minLength={2}
                   maxLength={60}
                   placeholder="South Asian"
@@ -434,6 +472,7 @@ export function CreateRecipePage() {
                 <Input
                   id="category"
                   name="category"
+                  defaultValue={recipe?.category}
                   minLength={2}
                   maxLength={60}
                   placeholder="Main course"
@@ -446,6 +485,7 @@ export function CreateRecipePage() {
                 <Input
                   id="tags"
                   name="tags"
+                  defaultValue={recipe?.tags.join(', ')}
                   placeholder="rice, comfort food, one pot"
                   disabled={isSubmitting}
                 />
@@ -458,9 +498,15 @@ export function CreateRecipePage() {
 
           <Card className="border-primary/20 bg-secondary/45 shadow-sm">
             <CardContent className="p-6">
-              <h2 className="font-serif text-2xl font-medium">Save as a draft</h2>
+              <h2 className="font-serif text-2xl font-medium">
+                {isEditing ? 'Save your changes' : 'Save as a draft'}
+              </h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                You can review this recipe in your workspace before publishing it.
+                {isEditing
+                  ? recipe.status === 'published'
+                    ? 'This recipe is already public, so updates will be visible after saving.'
+                    : 'The recipe will stay private until you publish it from your workspace.'
+                  : 'You can review this recipe in your workspace before publishing it.'}
               </p>
 
               {error && (
@@ -474,7 +520,7 @@ export function CreateRecipePage() {
 
               <Button className="mt-6 h-11 w-full" type="submit" disabled={isSubmitting}>
                 {isSubmitting ? <LoaderCircle className="animate-spin" /> : <Save />}
-                {isSubmitting ? 'Saving recipe…' : 'Save recipe'}
+                {isSubmitting ? 'Saving recipe…' : isEditing ? 'Save changes' : 'Save recipe'}
               </Button>
               <Link
                 className={cn(buttonVariants({ variant: 'ghost' }), 'mt-2 w-full')}
@@ -488,4 +534,55 @@ export function CreateRecipePage() {
       </form>
     </AppShell>
   );
+}
+
+function RecipeEditorSkeleton() {
+  return (
+    <AppShell>
+      <div className="mx-auto w-full max-w-7xl px-5 py-12 sm:px-8 lg:px-10">
+        <Skeleton className="h-5 w-36" />
+        <Skeleton className="mt-8 h-14 w-3/5" />
+        <Skeleton className="mt-4 h-5 w-2/5" />
+        <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_0.68fr]">
+          <div className="space-y-6">
+            <Skeleton className="h-96 rounded-2xl" />
+            <Skeleton className="h-96 rounded-2xl" />
+          </div>
+          <Skeleton className="h-128 rounded-2xl" />
+        </div>
+      </div>
+    </AppShell>
+  );
+}
+
+function EditRecipeLoader({ recipeId }: { recipeId: string }) {
+  const { recipe, isLoading, error, isNotFound, retry } = useAuthorRecipe(recipeId);
+
+  if (isLoading) return <RecipeEditorSkeleton />;
+  if (isNotFound) return <NotFoundPage />;
+
+  if (error || recipe === null) {
+    return (
+      <AppShell>
+        <section className="mx-auto grid min-h-[68vh] w-full max-w-7xl place-items-center px-5 py-20 text-center sm:px-8 lg:px-10">
+          <div>
+            <RefreshCw className="mx-auto size-7 text-destructive" />
+            <h1 className="mt-5 font-serif text-4xl font-medium">The recipe could not load</h1>
+            <p className="mx-auto mt-3 max-w-md leading-7 text-muted-foreground">{error}</p>
+            <Button className="mt-6" variant="outline" onClick={retry}>
+              Try again
+            </Button>
+          </div>
+        </section>
+      </AppShell>
+    );
+  }
+
+  return <RecipeForm key={recipe.id} recipe={recipe} />;
+}
+
+export function CreateRecipePage() {
+  const { recipeId } = useParams();
+
+  return recipeId ? <EditRecipeLoader recipeId={recipeId} /> : <RecipeForm recipe={null} />;
 }

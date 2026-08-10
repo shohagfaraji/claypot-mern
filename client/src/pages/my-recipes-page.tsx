@@ -146,6 +146,17 @@ export function MyRecipesPage() {
             </div>
           </div>
         )}
+        {location.state?.recipeUpdated === true && (
+          <div className="mb-6 flex items-start gap-3 rounded-xl border border-primary/20 bg-secondary/55 px-4 py-3 text-sm">
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
+            <div>
+              <p className="font-semibold">Recipe changes saved</p>
+              <p className="mt-0.5 text-muted-foreground">
+                Your workspace now shows the latest version.
+              </p>
+            </div>
+          </div>
+        )}
         <div className="rounded-2xl border bg-card p-4 shadow-sm sm:p-5">
           <div className="grid gap-3 lg:grid-cols-[1fr_11rem_11rem_auto]">
             <form key={search} className="relative flex gap-2" onSubmit={handleSearch}>

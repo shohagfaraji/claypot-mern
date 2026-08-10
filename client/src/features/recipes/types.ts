@@ -91,3 +91,18 @@ export interface CreateRecipeInput {
   category: string;
   tags: string[];
 }
+
+export interface AuthorRecipeDetail extends Omit<CreateRecipeInput, 'imageUrl' | 'instructions'> {
+  id: string;
+  author: string;
+  slug: string;
+  imageUrl: string | null;
+  instructions: Array<{
+    step: number;
+    description: string;
+  }>;
+  status: 'draft' | 'published';
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

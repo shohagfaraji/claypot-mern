@@ -1,4 +1,4 @@
-import { CalendarDays, Clock3, ExternalLink, LoaderCircle, Send } from 'lucide-react';
+import { CalendarDays, Clock3, ExternalLink, LoaderCircle, Pencil, Send } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
@@ -59,7 +59,14 @@ export function AuthorRecipeCard({ recipe, isPublishing, onPublish }: AuthorReci
           Updated {dateFormatter.format(new Date(recipe.updatedAt))}
         </p>
 
-        <div className="mt-5 border-t pt-4">
+        <div className="mt-5 grid grid-cols-2 gap-2 border-t pt-4">
+          <Link
+            className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}
+            to={`/my-recipes/${recipe.id}/edit`}
+          >
+            <Pencil />
+            Edit
+          </Link>
           {recipe.status === 'published' ? (
             <Link
               className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}
@@ -69,7 +76,7 @@ export function AuthorRecipeCard({ recipe, isPublishing, onPublish }: AuthorReci
               View published recipe
             </Link>
           ) : (
-            <Button className="w-full" disabled={isPublishing} onClick={() => onPublish(recipe.id)}>
+            <Button disabled={isPublishing} onClick={() => onPublish(recipe.id)}>
               {isPublishing ? <LoaderCircle className="animate-spin" /> : <Send />}
               {isPublishing ? 'Publishing…' : 'Publish recipe'}
             </Button>
