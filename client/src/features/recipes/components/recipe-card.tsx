@@ -23,6 +23,8 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
             className="size-full object-cover transition duration-500 group-hover:scale-[1.03]"
             src={recipe.imageUrl}
             alt={recipe.title}
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="grid size-full place-items-center" aria-hidden="true">
@@ -70,6 +72,8 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
                 className="size-full object-cover"
                 src={recipe.author.avatarUrl}
                 alt={recipe.author.name}
+                loading="lazy"
+                decoding="async"
               />
             ) : (
               getInitials(recipe.author.name)

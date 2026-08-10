@@ -6,6 +6,7 @@ import {
   mine,
   mineDetail,
   publish,
+  remove,
   update,
 } from '../controllers/recipe.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
@@ -38,3 +39,4 @@ recipeRouter.patch(
   validateParams(recipeIdParamsSchema),
   publish,
 );
+recipeRouter.delete('/:recipeId', authenticate, validateParams(recipeIdParamsSchema), remove);

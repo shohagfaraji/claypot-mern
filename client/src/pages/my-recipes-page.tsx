@@ -1,8 +1,27 @@
-import { BookOpen, CheckCircle2, Plus, RefreshCw, Search } from 'lucide-react';
-import { useState, type SubmitEvent } from 'react';
-import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import {
+  BookOpen,
+  CheckCircle2,
+  LoaderCircle,
+  Plus,
+  RefreshCw,
+  Search,
+  Trash2,
+} from 'lucide-react';
+import { useEffect, useRef, useState, type SubmitEvent } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { AppShell } from '@/components/layout/app-shell';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -14,9 +33,11 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthenticatedRequest } from '@/features/auth/hooks/use-authenticated-request';
+import { deleteRecipe } from '@/features/recipes/api/delete-recipe';
 import { publishRecipe } from '@/features/recipes/api/publish-recipe';
 import { AuthorRecipeCard } from '@/features/recipes/components/author-recipe-card';
 import { useAuthorRecipes } from '@/features/recipes/hooks/use-author-recipes';
+import type { AuthorRecipeListItem } from '@/features/recipes/types';
 import { cn } from '@/lib/utils';
 
 const statuses = ['draft', 'published'] as const;
@@ -48,6 +69,7 @@ function RecipeDashboardSkeleton() {
 export function MyRecipesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const request = useAuthenticatedRequest();
   const search = searchParams.get('search')?.trim() ?? '';
   const statusParam = searchParams.get('status');
@@ -57,6 +79,15 @@ export function MyRecipesPage() {
   const page = getPage(searchParams.get('page'));
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [recipeToDelete, setRecipeToDelete] = useState<AuthorRecipeListItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const hasClearedSaveNotice = useRef(false);
+  const [saveNotice] = useState<'created' | 'updated' | null>(() => {
+    if (location.state?.recipeCreated === true) return 'created';
+    if (location.state?.recipeUpdated === true) return 'updated';
+    return null;
+  });
 
   const query = new URLSearchParams({ page: String(page), limit: '9', sort });
   if (search) query.set('search', search);
@@ -64,6 +95,13 @@ export function MyRecipesPage() {
 
   const { recipes, pagination, isLoading, error, retry } = useAuthorRecipes(query.toString());
   const hasFilters = search.length > 0 || status !== 'all' || sort !== 'updated';
+
+  useEffect(() => {
+    if (saveNotice === null || hasClearedSaveNotice.current) return;
+
+    hasClearedSaveNotice.current = true;
+    void navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+  }, [location.pathname, location.search, navigate, saveNotice]);
 
   function updateFilter(name: string, value: string | null) {
     setSearchParams((current) => {
@@ -109,6 +147,32 @@ export function MyRecipesPage() {
     }
   }
 
+  async function handleDelete() {
+    if (recipeToDelete === null) return;
+
+    setDeleteError(null);
+    setIsDeleting(true);
+
+    try {
+      await deleteRecipe(request, recipeToDelete.id);
+      setRecipeToDelete(null);
+      setIsDeleting(false);
+
+      if (recipes.length === 1 && pagination.page > 1) {
+        goToPage(pagination.page - 1);
+      } else {
+        retry();
+      }
+    } catch (deleteRecipeError) {
+      setDeleteError(
+        deleteRecipeError instanceof Error
+          ? deleteRecipeError.message
+          : 'The recipe could not be deleted.',
+      );
+      setIsDeleting(false);
+    }
+  }
+
   return (
     <AppShell>
       <section className="border-b bg-card/45">
@@ -135,7 +199,7 @@ export function MyRecipesPage() {
       </section>
 
       <section className="mx-auto w-full max-w-7xl px-5 py-10 sm:px-8 lg:px-10">
-        {location.state?.recipeCreated === true && (
+        {saveNotice === 'created' && (
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-primary/20 bg-secondary/55 px-4 py-3 text-sm">
             <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
             <div>
@@ -146,7 +210,7 @@ export function MyRecipesPage() {
             </div>
           </div>
         )}
-        {location.state?.recipeUpdated === true && (
+        {saveNotice === 'updated' && (
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-primary/20 bg-secondary/55 px-4 py-3 text-sm">
             <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
             <div>
@@ -201,7 +265,12 @@ export function MyRecipesPage() {
             </Select>
 
             {hasFilters && (
-              <Button className="h-10" variant="ghost" onClick={() => setSearchParams({})}>
+              <Button
+                className="h-10"
+                type="button"
+                variant="ghost"
+                onClick={() => setSearchParams({})}
+              >
                 Clear filters
               </Button>
             )}
@@ -270,6 +339,10 @@ export function MyRecipesPage() {
                   recipe={recipe}
                   isPublishing={publishingId === recipe.id}
                   onPublish={handlePublish}
+                  onDelete={(selectedRecipe) => {
+                    setDeleteError(null);
+                    setRecipeToDelete(selectedRecipe);
+                  }}
                 />
               ))}
             </div>
@@ -279,6 +352,7 @@ export function MyRecipesPage() {
         {!isLoading && !error && pagination.totalPages > 1 && (
           <nav className="mt-10 flex justify-center gap-3" aria-label="Your recipe pages">
             <Button
+              type="button"
               variant="outline"
               disabled={pagination.page <= 1}
               onClick={() => goToPage(pagination.page - 1)}
@@ -286,6 +360,7 @@ export function MyRecipesPage() {
               Previous
             </Button>
             <Button
+              type="button"
               variant="outline"
               disabled={pagination.page >= pagination.totalPages}
               onClick={() => goToPage(pagination.page + 1)}
@@ -295,6 +370,45 @@ export function MyRecipesPage() {
           </nav>
         )}
       </section>
+
+      <AlertDialog
+        open={recipeToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) {
+            setRecipeToDelete(null);
+            setDeleteError(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive">
+              <Trash2 />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Delete this recipe?</AlertDialogTitle>
+            <AlertDialogDescription>
+              “{recipeToDelete?.title}” will be permanently removed. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {deleteError && (
+            <div
+              className="rounded-lg border border-destructive/20 bg-destructive/8 px-3 py-2 text-sm text-destructive"
+              role="alert"
+            >
+              {deleteError}
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Keep recipe</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" disabled={isDeleting} onClick={handleDelete}>
+              {isDeleting ? <LoaderCircle className="animate-spin" /> : <Trash2 />}
+              {isDeleting ? 'Deleting…' : 'Delete recipe'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
   );
 }

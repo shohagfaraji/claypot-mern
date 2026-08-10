@@ -4,6 +4,7 @@ import { AppError } from '../../src/errors/app-error.js';
 
 const {
   createRecipeMock,
+  deleteRecipeMock,
   getAuthorRecipeMock,
   getPublishedRecipeBySlugMock,
   listAuthorRecipesMock,
@@ -13,6 +14,7 @@ const {
   verifyAccessTokenMock,
 } = vi.hoisted(() => ({
   createRecipeMock: vi.fn(),
+  deleteRecipeMock: vi.fn(),
   getAuthorRecipeMock: vi.fn(),
   getPublishedRecipeBySlugMock: vi.fn(),
   listAuthorRecipesMock: vi.fn(),
@@ -41,6 +43,7 @@ vi.mock('../../src/services/session.service.js', () => ({
 
 vi.mock('../../src/services/recipe.service.js', () => ({
   createRecipe: createRecipeMock,
+  deleteRecipe: deleteRecipeMock,
   getAuthorRecipe: getAuthorRecipeMock,
   getPublishedRecipeBySlug: getPublishedRecipeBySlugMock,
   listAuthorRecipes: listAuthorRecipesMock,
@@ -633,6 +636,58 @@ describe('PUT /api/v1/recipes/:recipeId', () => {
       .put(`/api/v1/recipes/${recipeId}`)
       .set('Authorization', 'Bearer signed-access-token')
       .send(recipeBody)
+      .expect(404);
+
+    expect(response.body.error.code).toBe('RECIPE_NOT_FOUND');
+  });
+});
+
+describe('DELETE /api/v1/recipes/:recipeId', () => {
+  const app = createApp();
+  const recipeId = '507f1f77bcf86cd799439012';
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('deletes a recipe owned by the authenticated author', async () => {
+    verifyAccessTokenMock.mockResolvedValue({
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+    deleteRecipeMock.mockResolvedValue(undefined);
+
+    const response = await request(app)
+      .delete(`/api/v1/recipes/${recipeId}`)
+      .set('Authorization', 'Bearer signed-access-token')
+      .expect(204);
+
+    expect(deleteRecipeMock).toHaveBeenCalledWith(recipeId, {
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+    expect(response.text).toBe('');
+  });
+
+  it('authenticates before validating the recipe identifier', async () => {
+    const response = await request(app).delete('/api/v1/recipes/invalid-id').expect(401);
+
+    expect(deleteRecipeMock).not.toHaveBeenCalled();
+    expect(response.body.error.code).toBe('UNAUTHORIZED');
+  });
+
+  it('returns not found without revealing recipe ownership', async () => {
+    verifyAccessTokenMock.mockResolvedValue({
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+    deleteRecipeMock.mockRejectedValue(
+      new AppError(404, 'RECIPE_NOT_FOUND', 'Recipe was not found.'),
+    );
+
+    const response = await request(app)
+      .delete(`/api/v1/recipes/${recipeId}`)
+      .set('Authorization', 'Bearer signed-access-token')
       .expect(404);
 
     expect(response.body.error.code).toBe('RECIPE_NOT_FOUND');

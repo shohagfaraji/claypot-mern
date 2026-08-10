@@ -9,6 +9,7 @@ import type {
 } from '../schemas/recipe.schema.js';
 import {
   createRecipe,
+  deleteRecipe,
   getAuthorRecipe,
   getPublishedRecipeBySlug,
   listAuthorRecipes,
@@ -114,4 +115,15 @@ export const update: RequestHandler = async (request, response) => {
       recipe,
     },
   });
+};
+
+export const remove: RequestHandler = async (request, response) => {
+  if (request.auth === undefined) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  const { recipeId } = request.validatedParams as RecipeIdParams;
+  await deleteRecipe(recipeId, request.auth);
+
+  response.status(204).send();
 };

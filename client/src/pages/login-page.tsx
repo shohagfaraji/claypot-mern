@@ -8,20 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AuthPageLayout } from '@/features/auth/components/auth-page-layout';
 import { useAuth } from '@/features/auth/hooks/use-auth';
-
-function getRedirectPath(state: unknown) {
-  if (
-    typeof state === 'object' &&
-    state !== null &&
-    'from' in state &&
-    typeof state.from === 'string' &&
-    state.from.startsWith('/')
-  ) {
-    return state.from;
-  }
-
-  return '/';
-}
+import { getAuthRedirectPath } from '@/features/auth/lib/get-auth-redirect-path';
 
 export function LoginPage() {
   const { status, signIn } = useAuth();
@@ -30,7 +17,7 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const redirectPath = getRedirectPath(location.state);
+  const redirectPath = getAuthRedirectPath(location.state);
 
   if (status === 'authenticated') {
     return <Navigate to={redirectPath} replace />;

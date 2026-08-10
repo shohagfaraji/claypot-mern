@@ -85,4 +85,28 @@ describe('Recipe model', () => {
       },
     });
   });
+
+  it('enforces content limits when recipes are written outside the HTTP layer', async () => {
+    const recipe = createValidRecipe();
+
+    recipe.ingredients = Array.from({ length: 51 }, () => ({
+      name: 'Basmati rice',
+      quantity: '1 cup',
+    }));
+    recipe.instructions = Array.from({ length: 51 }, (_, index) => ({
+      step: index + 1,
+      description: 'Cook the rice until tender.',
+    }));
+    recipe.cuisine = 'A';
+    recipe.category = 'B';
+
+    await expect(recipe.validate()).rejects.toMatchObject({
+      errors: {
+        ingredients: expect.any(Object),
+        instructions: expect.any(Object),
+        cuisine: expect.any(Object),
+        category: expect.any(Object),
+      },
+    });
+  });
 });

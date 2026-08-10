@@ -406,6 +406,14 @@ export async function updateRecipe(
   return toPublicRecipe(recipe);
 }
 
+export async function deleteRecipe(recipeId: string, actor: AccessTokenIdentity): Promise<void> {
+  const recipe = await RecipeModel.findOneAndDelete(getOwnedRecipeFilter(recipeId, actor));
+
+  if (recipe === null) {
+    throw new AppError(404, 'RECIPE_NOT_FOUND', 'Recipe was not found.');
+  }
+}
+
 function getAuthorRecipeSort(sort: ListOwnRecipesQuery['sort']): Record<string, 1 | -1> {
   const sorts: Record<ListOwnRecipesQuery['sort'], Record<string, 1 | -1>> = {
     updated: { updatedAt: -1, _id: -1 },

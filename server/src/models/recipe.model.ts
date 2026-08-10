@@ -63,6 +63,7 @@ const instructionSchema = new Schema<RecipeInstruction>(
       type: String,
       required: true,
       trim: true,
+      minlength: 3,
       maxlength: 500,
     },
   },
@@ -110,16 +111,17 @@ const recipeSchema = new Schema<Recipe>(
       type: [ingredientSchema],
       required: true,
       validate: {
-        validator: (ingredients: unknown[]) => ingredients.length > 0,
-        message: 'A recipe requires at least one ingredient.',
+        validator: (ingredients: unknown[]) => ingredients.length > 0 && ingredients.length <= 50,
+        message: 'A recipe requires between 1 and 50 ingredients.',
       },
     },
     instructions: {
       type: [instructionSchema],
       required: true,
       validate: {
-        validator: (instructions: unknown[]) => instructions.length > 0,
-        message: 'A recipe requires at least one instruction.',
+        validator: (instructions: unknown[]) =>
+          instructions.length > 0 && instructions.length <= 50,
+        message: 'A recipe requires between 1 and 50 instructions.',
       },
     },
     prepTimeMinutes: {
@@ -149,12 +151,14 @@ const recipeSchema = new Schema<Recipe>(
       type: String,
       required: true,
       trim: true,
+      minlength: 2,
       maxlength: 60,
     },
     category: {
       type: String,
       required: true,
       trim: true,
+      minlength: 2,
       maxlength: 60,
     },
     tags: {
@@ -163,6 +167,7 @@ const recipeSchema = new Schema<Recipe>(
           type: String,
           trim: true,
           lowercase: true,
+          minlength: 1,
           maxlength: 30,
         },
       ],

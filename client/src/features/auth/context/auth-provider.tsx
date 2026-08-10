@@ -78,6 +78,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const signOut = useCallback(async () => {
+    await tokenRenewalRequest.current?.catch(() => undefined);
+
     await logout();
     sessionRestoreRequest = null;
     setState({ user: null, accessToken: null, status: 'unauthenticated' });

@@ -1,4 +1,12 @@
-import { CalendarDays, Clock3, ExternalLink, LoaderCircle, Pencil, Send } from 'lucide-react';
+import {
+  CalendarDays,
+  Clock3,
+  ExternalLink,
+  LoaderCircle,
+  Pencil,
+  Send,
+  Trash2,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +19,7 @@ interface AuthorRecipeCardProps {
   recipe: AuthorRecipeListItem;
   isPublishing: boolean;
   onPublish: (recipeId: string) => void;
+  onDelete: (recipe: AuthorRecipeListItem) => void;
 }
 
 const dateFormatter = new Intl.DateTimeFormat('en', {
@@ -19,12 +28,23 @@ const dateFormatter = new Intl.DateTimeFormat('en', {
   year: 'numeric',
 });
 
-export function AuthorRecipeCard({ recipe, isPublishing, onPublish }: AuthorRecipeCardProps) {
+export function AuthorRecipeCard({
+  recipe,
+  isPublishing,
+  onPublish,
+  onDelete,
+}: AuthorRecipeCardProps) {
   return (
     <Card className="gap-0 overflow-hidden border-border/70 py-0 shadow-sm">
       <div className="relative aspect-[16/9] overflow-hidden bg-[radial-gradient(circle_at_72%_24%,color-mix(in_oklch,var(--accent),white_14%),transparent_32%),linear-gradient(145deg,var(--secondary),color-mix(in_oklch,var(--accent),white_48%))]">
         {recipe.imageUrl ? (
-          <img className="size-full object-cover" src={recipe.imageUrl} alt={recipe.title} />
+          <img
+            className="size-full object-cover"
+            src={recipe.imageUrl}
+            alt={recipe.title}
+            loading="lazy"
+            decoding="async"
+          />
         ) : (
           <div className="grid size-full place-items-center" aria-hidden="true">
             <div className="absolute inset-8 rounded-full border border-primary/12" />
@@ -59,7 +79,7 @@ export function AuthorRecipeCard({ recipe, isPublishing, onPublish }: AuthorReci
           Updated {dateFormatter.format(new Date(recipe.updatedAt))}
         </p>
 
-        <div className="mt-5 grid grid-cols-2 gap-2 border-t pt-4">
+        <div className="mt-5 grid grid-cols-[auto_1fr_auto] gap-2 border-t pt-4">
           <Link
             className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}
             to={`/my-recipes/${recipe.id}/edit`}
@@ -73,7 +93,7 @@ export function AuthorRecipeCard({ recipe, isPublishing, onPublish }: AuthorReci
               to={`/recipes/${recipe.slug}`}
             >
               <ExternalLink />
-              View published recipe
+              View
             </Link>
           ) : (
             <Button disabled={isPublishing} onClick={() => onPublish(recipe.id)}>
@@ -81,6 +101,16 @@ export function AuthorRecipeCard({ recipe, isPublishing, onPublish }: AuthorReci
               {isPublishing ? 'Publishing…' : 'Publish recipe'}
             </Button>
           )}
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon"
+            aria-label={`Delete ${recipe.title}`}
+            disabled={isPublishing}
+            onClick={() => onDelete(recipe)}
+          >
+            <Trash2 />
+          </Button>
         </div>
       </CardContent>
     </Card>
