@@ -9,7 +9,10 @@ const {
   getPublishedRecipeBySlugMock,
   listAuthorRecipesMock,
   listPublishedRecipesMock,
+  listSavedRecipesMock,
   publishRecipeMock,
+  saveRecipeMock,
+  unsaveRecipeMock,
   unpublishRecipeMock,
   updateRecipeMock,
   verifyAccessTokenMock,
@@ -20,7 +23,10 @@ const {
   getPublishedRecipeBySlugMock: vi.fn(),
   listAuthorRecipesMock: vi.fn(),
   listPublishedRecipesMock: vi.fn(),
+  listSavedRecipesMock: vi.fn(),
   publishRecipeMock: vi.fn(),
+  saveRecipeMock: vi.fn(),
+  unsaveRecipeMock: vi.fn(),
   unpublishRecipeMock: vi.fn(),
   updateRecipeMock: vi.fn(),
   verifyAccessTokenMock: vi.fn(),
@@ -53,6 +59,12 @@ vi.mock('../../src/services/recipe.service.js', () => ({
   publishRecipe: publishRecipeMock,
   unpublishRecipe: unpublishRecipeMock,
   updateRecipe: updateRecipeMock,
+}));
+
+vi.mock('../../src/services/saved-recipe.service.js', () => ({
+  listSavedRecipes: listSavedRecipesMock,
+  saveRecipe: saveRecipeMock,
+  unsaveRecipe: unsaveRecipeMock,
 }));
 
 import { createApp } from '../../src/app.js';
@@ -183,6 +195,133 @@ describe('GET /api/v1/recipes', () => {
 
     expect(listPublishedRecipesMock).not.toHaveBeenCalled();
     expect(response.body.error.code).toBe('VALIDATION_ERROR');
+  });
+});
+
+describe('GET /api/v1/recipes/saved', () => {
+  const app = createApp();
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('returns the authenticated user saved recipe collection', async () => {
+    verifyAccessTokenMock.mockResolvedValue({
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+    listSavedRecipesMock.mockResolvedValue({
+      items: [
+        {
+          id: '507f1f77bcf86cd799439012',
+          title: 'Spiced Claypot Rice',
+          savedAt: new Date('2026-08-11T08:00:00.000Z'),
+        },
+      ],
+      pagination: { page: 1, limit: 9, total: 1, totalPages: 1 },
+    });
+
+    const response = await request(app)
+      .get('/api/v1/recipes/saved')
+      .set('Authorization', 'Bearer signed-access-token')
+      .query({ limit: '9', search: ' rice ', sort: 'saved' })
+      .expect(200);
+
+    expect(listSavedRecipesMock).toHaveBeenCalledWith('507f1f77bcf86cd799439011', {
+      page: 1,
+      limit: 9,
+      search: 'rice',
+      sort: 'saved',
+      tags: [],
+    });
+    expect(response.body).toMatchObject({
+      data: {
+        recipes: [{ id: '507f1f77bcf86cd799439012' }],
+        pagination: { total: 1 },
+      },
+    });
+  });
+
+  it('authenticates before validating saved recipe filters', async () => {
+    const response = await request(app)
+      .get('/api/v1/recipes/saved')
+      .query({ limit: '100' })
+      .expect(401);
+
+    expect(listSavedRecipesMock).not.toHaveBeenCalled();
+    expect(response.body.error.code).toBe('UNAUTHORIZED');
+  });
+});
+
+describe('PUT /api/v1/recipes/:recipeId/save', () => {
+  const app = createApp();
+  const recipeId = '507f1f77bcf86cd799439012';
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('idempotently saves a published recipe', async () => {
+    verifyAccessTokenMock.mockResolvedValue({
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+    saveRecipeMock.mockResolvedValue(undefined);
+
+    await request(app)
+      .put(`/api/v1/recipes/${recipeId}/save`)
+      .set('Authorization', 'Bearer signed-access-token')
+      .expect(204);
+
+    expect(saveRecipeMock).toHaveBeenCalledWith('507f1f77bcf86cd799439011', recipeId);
+  });
+
+  it('does not expose missing or private recipes', async () => {
+    verifyAccessTokenMock.mockResolvedValue({
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+    saveRecipeMock.mockRejectedValue(
+      new AppError(404, 'RECIPE_NOT_FOUND', 'Recipe was not found.'),
+    );
+
+    const response = await request(app)
+      .put(`/api/v1/recipes/${recipeId}/save`)
+      .set('Authorization', 'Bearer signed-access-token')
+      .expect(404);
+
+    expect(response.body.error.code).toBe('RECIPE_NOT_FOUND');
+  });
+});
+
+describe('DELETE /api/v1/recipes/:recipeId/save', () => {
+  const app = createApp();
+  const recipeId = '507f1f77bcf86cd799439012';
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('idempotently removes a recipe from the current user collection', async () => {
+    verifyAccessTokenMock.mockResolvedValue({
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+    unsaveRecipeMock.mockResolvedValue(undefined);
+
+    await request(app)
+      .delete(`/api/v1/recipes/${recipeId}/save`)
+      .set('Authorization', 'Bearer signed-access-token')
+      .expect(204);
+
+    expect(unsaveRecipeMock).toHaveBeenCalledWith('507f1f77bcf86cd799439011', recipeId);
+  });
+
+  it('authenticates before validating the recipe ID', async () => {
+    const response = await request(app).delete('/api/v1/recipes/invalid-id/save').expect(401);
+
+    expect(unsaveRecipeMock).not.toHaveBeenCalled();
+    expect(response.body.error.code).toBe('UNAUTHORIZED');
   });
 });
 

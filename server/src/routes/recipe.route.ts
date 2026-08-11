@@ -10,12 +10,14 @@ import {
   unpublish,
   update,
 } from '../controllers/recipe.controller.js';
+import { listSaved, save, unsave } from '../controllers/saved-recipe.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { validateBody, validateParams, validateQuery } from '../middleware/validate-request.js';
 import {
   createRecipeInputSchema,
   listOwnRecipesQuerySchema,
   listRecipesQuerySchema,
+  listSavedRecipesQuerySchema,
   recipeIdParamsSchema,
   recipeSlugParamsSchema,
 } from '../schemas/recipe.schema.js';
@@ -25,8 +27,10 @@ export const recipeRouter = Router();
 recipeRouter.get('/', validateQuery(listRecipesQuerySchema), list);
 recipeRouter.get('/mine', authenticate, validateQuery(listOwnRecipesQuerySchema), mine);
 recipeRouter.get('/mine/:recipeId', authenticate, validateParams(recipeIdParamsSchema), mineDetail);
+recipeRouter.get('/saved', authenticate, validateQuery(listSavedRecipesQuerySchema), listSaved);
 recipeRouter.get('/:slug', validateParams(recipeSlugParamsSchema), detail);
 recipeRouter.post('/', authenticate, validateBody(createRecipeInputSchema), create);
+recipeRouter.put('/:recipeId/save', authenticate, validateParams(recipeIdParamsSchema), save);
 recipeRouter.put(
   '/:recipeId',
   authenticate,
@@ -46,4 +50,5 @@ recipeRouter.patch(
   validateParams(recipeIdParamsSchema),
   unpublish,
 );
+recipeRouter.delete('/:recipeId/save', authenticate, validateParams(recipeIdParamsSchema), unsave);
 recipeRouter.delete('/:recipeId', authenticate, validateParams(recipeIdParamsSchema), remove);

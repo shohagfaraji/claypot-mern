@@ -145,6 +145,17 @@ export const listOwnRecipesQuerySchema = z.strictObject({
   sort: z.enum(['updated', 'newest', 'oldest']).default('updated'),
 });
 
+export const listSavedRecipesQuerySchema = z.strictObject({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(24).default(12),
+  search: searchSchema,
+  difficulty: z.enum(recipeDifficulties).optional(),
+  cuisine: optionalFilterSchema('Cuisine'),
+  category: optionalFilterSchema('Category'),
+  tags: listTagsSchema,
+  sort: z.enum(['saved', 'newest', 'quickest']).default('saved'),
+});
+
 export const recipeSlugParamsSchema = z.strictObject({
   slug: z
     .string()
@@ -166,5 +177,6 @@ export const recipeIdParamsSchema = z.strictObject({
 export type CreateRecipeInput = z.infer<typeof createRecipeInputSchema>;
 export type ListOwnRecipesQuery = z.infer<typeof listOwnRecipesQuerySchema>;
 export type ListRecipesQuery = z.infer<typeof listRecipesQuerySchema>;
+export type ListSavedRecipesQuery = z.infer<typeof listSavedRecipesQuerySchema>;
 export type RecipeIdParams = z.infer<typeof recipeIdParamsSchema>;
 export type RecipeSlugParams = z.infer<typeof recipeSlugParamsSchema>;
