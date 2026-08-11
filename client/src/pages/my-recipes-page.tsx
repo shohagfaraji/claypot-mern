@@ -1,6 +1,7 @@
 import {
   BookOpen,
   CheckCircle2,
+  EyeOff,
   LoaderCircle,
   Plus,
   RefreshCw,
@@ -35,6 +36,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthenticatedRequest } from '@/features/auth/hooks/use-authenticated-request';
 import { deleteRecipe } from '@/features/recipes/api/delete-recipe';
 import { publishRecipe } from '@/features/recipes/api/publish-recipe';
+import { unpublishRecipe } from '@/features/recipes/api/unpublish-recipe';
 import { AuthorRecipeCard } from '@/features/recipes/components/author-recipe-card';
 import { useAuthorRecipes } from '@/features/recipes/hooks/use-author-recipes';
 import type { AuthorRecipeListItem } from '@/features/recipes/types';
@@ -79,6 +81,9 @@ export function MyRecipesPage() {
   const page = getPage(searchParams.get('page'));
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [recipeToUnpublish, setRecipeToUnpublish] = useState<AuthorRecipeListItem | null>(null);
+  const [isUnpublishing, setIsUnpublishing] = useState(false);
+  const [unpublishError, setUnpublishError] = useState<string | null>(null);
   const [recipeToDelete, setRecipeToDelete] = useState<AuthorRecipeListItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -170,6 +175,32 @@ export function MyRecipesPage() {
           : 'The recipe could not be deleted.',
       );
       setIsDeleting(false);
+    }
+  }
+
+  async function handleUnpublish() {
+    if (recipeToUnpublish === null) return;
+
+    setUnpublishError(null);
+    setIsUnpublishing(true);
+
+    try {
+      await unpublishRecipe(request, recipeToUnpublish.id);
+      setRecipeToUnpublish(null);
+      setIsUnpublishing(false);
+
+      if (status === 'published' && recipes.length === 1 && pagination.page > 1) {
+        goToPage(pagination.page - 1);
+      } else {
+        retry();
+      }
+    } catch (unpublishRecipeError) {
+      setUnpublishError(
+        unpublishRecipeError instanceof Error
+          ? unpublishRecipeError.message
+          : 'The recipe could not be returned to drafts.',
+      );
+      setIsUnpublishing(false);
     }
   }
 
@@ -339,6 +370,10 @@ export function MyRecipesPage() {
                   recipe={recipe}
                   isPublishing={publishingId === recipe.id}
                   onPublish={handlePublish}
+                  onUnpublish={(selectedRecipe) => {
+                    setUnpublishError(null);
+                    setRecipeToUnpublish(selectedRecipe);
+                  }}
                   onDelete={(selectedRecipe) => {
                     setDeleteError(null);
                     setRecipeToDelete(selectedRecipe);
@@ -370,6 +405,46 @@ export function MyRecipesPage() {
           </nav>
         )}
       </section>
+
+      <AlertDialog
+        open={recipeToUnpublish !== null}
+        onOpenChange={(open) => {
+          if (!open && !isUnpublishing) {
+            setRecipeToUnpublish(null);
+            setUnpublishError(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-secondary text-primary">
+              <EyeOff />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Return this recipe to drafts?</AlertDialogTitle>
+            <AlertDialogDescription>
+              “{recipeToUnpublish?.title}” will no longer be visible in the public recipe library.
+              You can publish it again later using the same recipe link.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {unpublishError && (
+            <div
+              className="rounded-lg border border-destructive/20 bg-destructive/8 px-3 py-2 text-sm text-destructive"
+              role="alert"
+            >
+              {unpublishError}
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isUnpublishing}>Keep published</AlertDialogCancel>
+            <AlertDialogAction disabled={isUnpublishing} onClick={handleUnpublish}>
+              {isUnpublishing ? <LoaderCircle className="animate-spin" /> : <EyeOff />}
+              {isUnpublishing ? 'Moving to drafts…' : 'Move to drafts'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={recipeToDelete !== null}

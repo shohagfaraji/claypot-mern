@@ -15,6 +15,7 @@ import {
   listAuthorRecipes,
   listPublishedRecipes,
   publishRecipe,
+  unpublishRecipe,
   updateRecipe,
 } from '../services/recipe.service.js';
 
@@ -94,6 +95,21 @@ export const publish: RequestHandler = async (request, response) => {
 
   const { recipeId } = request.validatedParams as RecipeIdParams;
   const recipe = await publishRecipe(recipeId, request.auth);
+
+  response.status(200).json({
+    data: {
+      recipe,
+    },
+  });
+};
+
+export const unpublish: RequestHandler = async (request, response) => {
+  if (request.auth === undefined) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  const { recipeId } = request.validatedParams as RecipeIdParams;
+  const recipe = await unpublishRecipe(recipeId, request.auth);
 
   response.status(200).json({
     data: {

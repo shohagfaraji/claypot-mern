@@ -350,6 +350,25 @@ export async function publishRecipe(
   return toPublicRecipe(recipe);
 }
 
+export async function unpublishRecipe(
+  recipeId: string,
+  actor: AccessTokenIdentity,
+): Promise<PublicRecipe> {
+  const recipe = await RecipeModel.findOne(getOwnedRecipeFilter(recipeId, actor));
+
+  if (recipe === null) {
+    throw new AppError(404, 'RECIPE_NOT_FOUND', 'Recipe was not found.');
+  }
+
+  if (recipe.status !== 'draft' || recipe.publishedAt !== null) {
+    recipe.status = 'draft';
+    recipe.publishedAt = null;
+    await recipe.save();
+  }
+
+  return toPublicRecipe(recipe);
+}
+
 function getOwnedRecipeFilter(recipeId: string, actor: AccessTokenIdentity) {
   const filter: Record<string, unknown> = {
     _id: new Types.ObjectId(recipeId),

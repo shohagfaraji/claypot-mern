@@ -1,6 +1,7 @@
 import {
   CalendarDays,
   Clock3,
+  EyeOff,
   ExternalLink,
   LoaderCircle,
   Pencil,
@@ -19,6 +20,7 @@ interface AuthorRecipeCardProps {
   recipe: AuthorRecipeListItem;
   isPublishing: boolean;
   onPublish: (recipeId: string) => void;
+  onUnpublish: (recipe: AuthorRecipeListItem) => void;
   onDelete: (recipe: AuthorRecipeListItem) => void;
 }
 
@@ -32,6 +34,7 @@ export function AuthorRecipeCard({
   recipe,
   isPublishing,
   onPublish,
+  onUnpublish,
   onDelete,
 }: AuthorRecipeCardProps) {
   return (
@@ -79,7 +82,14 @@ export function AuthorRecipeCard({
           Updated {dateFormatter.format(new Date(recipe.updatedAt))}
         </p>
 
-        <div className="mt-5 grid grid-cols-[auto_1fr_auto] gap-2 border-t pt-4">
+        <div
+          className={cn(
+            'mt-5 grid gap-2 border-t pt-4',
+            recipe.status === 'published'
+              ? 'grid-cols-[auto_1fr_auto_auto]'
+              : 'grid-cols-[auto_1fr_auto]',
+          )}
+        >
           <Link
             className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}
             to={`/my-recipes/${recipe.id}/edit`}
@@ -88,15 +98,26 @@ export function AuthorRecipeCard({
             Edit
           </Link>
           {recipe.status === 'published' ? (
-            <Link
-              className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}
-              to={`/recipes/${recipe.slug}`}
-            >
-              <ExternalLink />
-              View
-            </Link>
+            <>
+              <Link
+                className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}
+                to={`/recipes/${recipe.slug}`}
+              >
+                <ExternalLink />
+                View
+              </Link>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label={`Unpublish ${recipe.title}`}
+                onClick={() => onUnpublish(recipe)}
+              >
+                <EyeOff />
+              </Button>
+            </>
           ) : (
-            <Button disabled={isPublishing} onClick={() => onPublish(recipe.id)}>
+            <Button type="button" disabled={isPublishing} onClick={() => onPublish(recipe.id)}>
               {isPublishing ? <LoaderCircle className="animate-spin" /> : <Send />}
               {isPublishing ? 'Publishing…' : 'Publish recipe'}
             </Button>
