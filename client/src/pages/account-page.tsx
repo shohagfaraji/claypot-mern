@@ -1,12 +1,26 @@
-import { CalendarDays, CheckCircle2, LoaderCircle, LogOut, Mail, ShieldCheck } from 'lucide-react';
-import { useState } from 'react';
+import {
+  CalendarDays,
+  CheckCircle2,
+  Image as ImageIcon,
+  LoaderCircle,
+  LogOut,
+  Mail,
+  Save,
+  ShieldCheck,
+} from 'lucide-react';
+import { useState, type SubmitEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { AppShell } from '@/components/layout/app-shell';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { updateProfile } from '@/features/auth/api/auth';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuthenticatedRequest } from '@/features/auth/hooks/use-authenticated-request';
 import { getInitials } from '@/lib/get-initials';
 
 const dateFormatter = new Intl.DateTimeFormat('en', {
@@ -16,10 +30,14 @@ const dateFormatter = new Intl.DateTimeFormat('en', {
 });
 
 export function AccountPage() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, updateSessionUser } = useAuth();
+  const request = useAuthenticatedRequest();
   const navigate = useNavigate();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSaved, setProfileSaved] = useState(false);
 
   if (user === null) {
     return null;
@@ -37,6 +55,35 @@ export function AccountPage() {
         signOutError instanceof Error ? signOutError.message : 'Sign out could not be completed.',
       );
       setIsSigningOut(false);
+    }
+  }
+
+  async function handleProfileSubmit(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const avatarUrl = String(formData.get('avatarUrl') ?? '').trim();
+    const bio = String(formData.get('bio') ?? '').trim();
+
+    setProfileError(null);
+    setProfileSaved(false);
+    setIsSavingProfile(true);
+
+    try {
+      const updatedUser = await updateProfile(request, {
+        name: String(formData.get('name') ?? '').trim(),
+        avatarUrl: avatarUrl || null,
+        bio: bio || null,
+      });
+      updateSessionUser(updatedUser);
+      setProfileSaved(true);
+      setIsSavingProfile(false);
+    } catch (updateProfileError) {
+      setProfileError(
+        updateProfileError instanceof Error
+          ? updateProfileError.message
+          : 'Your profile could not be updated.',
+      );
+      setIsSavingProfile(false);
     }
   }
 
@@ -136,6 +183,100 @@ export function AccountPage() {
               {isSigningOut ? <LoaderCircle className="animate-spin" /> : <LogOut />}
               {isSigningOut ? 'Signing out…' : 'Sign out'}
             </Button>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="mx-auto w-full max-w-7xl px-5 pb-12 sm:px-8 lg:px-10">
+        <Card className="border-border/70 shadow-sm">
+          <CardContent className="p-6 sm:p-8">
+            <div className="grid gap-8 lg:grid-cols-[0.55fr_1fr] lg:gap-12">
+              <div>
+                <div className="grid size-11 place-items-center rounded-xl bg-secondary text-primary">
+                  <ImageIcon className="size-5" />
+                </div>
+                <h2 className="mt-5 font-serif text-3xl font-medium tracking-[-0.03em]">
+                  Edit your profile
+                </h2>
+                <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
+                  Keep your display name and introduction current. These details will represent you
+                  wherever your recipes appear.
+                </p>
+              </div>
+
+              <form className="space-y-5" onSubmit={handleProfileSubmit}>
+                <div className="space-y-2">
+                  <Label htmlFor="profile-name">Display name</Label>
+                  <Input
+                    id="profile-name"
+                    className="h-11"
+                    name="name"
+                    type="text"
+                    autoComplete="name"
+                    defaultValue={user.name}
+                    minLength={2}
+                    maxLength={80}
+                    required
+                    disabled={isSavingProfile}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="profile-avatar">Avatar URL</Label>
+                  <Input
+                    id="profile-avatar"
+                    className="h-11"
+                    name="avatarUrl"
+                    type="url"
+                    defaultValue={user.avatarUrl ?? ''}
+                    maxLength={2048}
+                    placeholder="https://example.com/avatar.jpg"
+                    disabled={isSavingProfile}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Leave this empty to use your initials.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="profile-bio">Bio</Label>
+                  <Textarea
+                    id="profile-bio"
+                    className="min-h-28 resize-y"
+                    name="bio"
+                    defaultValue={user.bio ?? ''}
+                    maxLength={300}
+                    placeholder="Tell other cooks a little about yourself."
+                    disabled={isSavingProfile}
+                  />
+                  <p className="text-xs text-muted-foreground">Up to 300 characters.</p>
+                </div>
+
+                {profileError && (
+                  <div
+                    className="rounded-xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-sm text-destructive"
+                    role="alert"
+                  >
+                    {profileError}
+                  </div>
+                )}
+
+                {profileSaved && (
+                  <div
+                    className="flex items-center gap-2 rounded-xl border border-primary/20 bg-secondary/55 px-4 py-3 text-sm font-medium"
+                    role="status"
+                  >
+                    <CheckCircle2 className="size-4 text-primary" />
+                    Your profile has been updated.
+                  </div>
+                )}
+
+                <Button type="submit" disabled={isSavingProfile}>
+                  {isSavingProfile ? <LoaderCircle className="animate-spin" /> : <Save />}
+                  {isSavingProfile ? 'Saving profile…' : 'Save profile'}
+                </Button>
+              </form>
+            </div>
           </CardContent>
         </Card>
       </section>

@@ -5,12 +5,13 @@ import {
   getRefreshTokenCookieOptions,
   refreshTokenCookieName,
 } from '../lib/refresh-token.js';
-import type { LoginInput, RegisterInput } from '../schemas/auth.schema.js';
+import type { LoginInput, RegisterInput, UpdateProfileInput } from '../schemas/auth.schema.js';
 import {
   authenticateUser,
   getCurrentUser,
   type PublicUser,
   registerUser,
+  updateCurrentUser,
 } from '../services/auth.service.js';
 import {
   createAuthSession,
@@ -100,6 +101,20 @@ export const me: RequestHandler = async (request, response) => {
   }
 
   const user = await getCurrentUser(request.auth.userId);
+
+  response.status(200).json({
+    data: {
+      user,
+    },
+  });
+};
+
+export const updateMe: RequestHandler = async (request, response) => {
+  if (request.auth === undefined) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  const user = await updateCurrentUser(request.auth.userId, request.body as UpdateProfileInput);
 
   response.status(200).json({
     data: {

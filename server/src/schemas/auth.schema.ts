@@ -63,5 +63,27 @@ export const loginInputSchema = z.strictObject({
     }),
 });
 
+export const updateProfileInputSchema = z
+  .strictObject({
+    name: z
+      .string()
+      .trim()
+      .min(2, 'Name must contain at least 2 characters.')
+      .max(80, 'Name cannot exceed 80 characters.')
+      .optional(),
+    avatarUrl: z
+      .string()
+      .trim()
+      .max(2_048, 'Avatar URL is too long.')
+      .pipe(z.url('Enter a valid avatar URL.'))
+      .nullable()
+      .optional(),
+    bio: z.string().trim().max(300, 'Bio cannot exceed 300 characters.').nullable().optional(),
+  })
+  .refine((input) => Object.keys(input).length > 0, {
+    message: 'Add at least one profile field to update.',
+  });
+
 export type RegisterInput = z.infer<typeof registerInputSchema>;
 export type LoginInput = z.infer<typeof loginInputSchema>;
+export type UpdateProfileInput = z.infer<typeof updateProfileInputSchema>;

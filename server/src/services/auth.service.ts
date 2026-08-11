@@ -1,7 +1,7 @@
 import { AppError } from '../errors/app-error.js';
 import { hashPassword, verifyPassword } from '../lib/password.js';
 import { UserModel } from '../models/user.model.js';
-import type { LoginInput, RegisterInput } from '../schemas/auth.schema.js';
+import type { LoginInput, RegisterInput, UpdateProfileInput } from '../schemas/auth.schema.js';
 
 const fallbackPasswordHash = '$2b$12$EwbyiAokvt5b.KYCGIXK.ujjVDkteVub4lXR.6lG6VJFVJIUCRKPS';
 
@@ -88,6 +88,24 @@ export async function getCurrentUser(userId: string): Promise<PublicUser> {
   if (user === null) {
     throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
   }
+
+  return toPublicUser(user);
+}
+
+export async function updateCurrentUser(
+  userId: string,
+  input: UpdateProfileInput,
+): Promise<PublicUser> {
+  const user = await UserModel.findById(userId);
+
+  if (user === null) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  if (input.name !== undefined) user.name = input.name;
+  if (input.avatarUrl !== undefined) user.avatarUrl = input.avatarUrl;
+  if (input.bio !== undefined) user.bio = input.bio;
+  await user.save();
 
   return toPublicUser(user);
 }

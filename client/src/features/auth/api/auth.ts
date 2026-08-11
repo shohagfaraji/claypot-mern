@@ -1,4 +1,10 @@
-import type { AuthSession, AuthUser, LoginInput, RegisterInput } from '@/features/auth/types';
+import type {
+  AuthSession,
+  AuthUser,
+  LoginInput,
+  RegisterInput,
+  UpdateProfileInput,
+} from '@/features/auth/types';
 import { apiRequest } from '@/lib/api-client';
 
 interface LoginResponse {
@@ -57,4 +63,17 @@ export async function getCurrentUser(accessToken: string) {
 
 export async function logout() {
   await apiRequest<void>('/auth/logout', { method: 'POST' });
+}
+
+export async function updateProfile(
+  request: <T>(path: string, init?: RequestInit) => Promise<T>,
+  input: UpdateProfileInput,
+) {
+  const response = await request<CurrentUserResponse>('/auth/me', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+
+  return response.data.user;
 }

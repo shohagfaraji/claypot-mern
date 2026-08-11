@@ -26,3 +26,9 @@ export interface RegisterInput {
   email: string;
   password: string;
 }
+
+export interface UpdateProfileInput {
+  name: string;
+  avatarUrl: string | null;
+  bio: string | null;
+}

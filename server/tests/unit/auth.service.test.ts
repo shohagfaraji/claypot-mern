@@ -31,7 +31,12 @@ vi.mock('../../src/lib/password.js', () => ({
   verifyPassword: verifyPasswordMock,
 }));
 
-import { authenticateUser, getCurrentUser, registerUser } from '../../src/services/auth.service.js';
+import {
+  authenticateUser,
+  getCurrentUser,
+  registerUser,
+  updateCurrentUser,
+} from '../../src/services/auth.service.js';
 
 const registrationInput = {
   name: 'Amina Rahman',
@@ -248,6 +253,83 @@ describe('current user lookup', () => {
     selectCurrentUserMock.mockResolvedValue(null);
 
     await expect(getCurrentUser('missing-user-id')).rejects.toMatchObject({
+      statusCode: 401,
+      code: 'UNAUTHORIZED',
+    });
+  });
+});
+
+describe('current user profile update', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('updates editable fields and returns the public user', async () => {
+    const saveUserMock = vi.fn().mockResolvedValue(undefined);
+    const user = {
+      id: 'user-id',
+      name: 'Amina Rahman',
+      username: 'amina_kitchen',
+      email: 'amina@example.com',
+      avatarUrl: null,
+      bio: null,
+      role: 'user' as const,
+      isEmailVerified: false,
+      createdAt: new Date('2026-07-27T08:00:00.000Z'),
+      save: saveUserMock,
+    };
+    findUserByIdMock.mockResolvedValue(user);
+
+    const result = await updateCurrentUser('user-id', {
+      name: 'Amina Noor',
+      avatarUrl: 'https://images.example.com/amina.jpg',
+      bio: 'Home cook and recipe collector.',
+    });
+
+    expect(findUserByIdMock).toHaveBeenCalledWith('user-id');
+    expect(saveUserMock).toHaveBeenCalledOnce();
+    expect(result).toEqual({
+      id: 'user-id',
+      name: 'Amina Noor',
+      username: 'amina_kitchen',
+      email: 'amina@example.com',
+      avatarUrl: 'https://images.example.com/amina.jpg',
+      bio: 'Home cook and recipe collector.',
+      role: 'user',
+      isEmailVerified: false,
+      createdAt: new Date('2026-07-27T08:00:00.000Z'),
+    });
+  });
+
+  it('clears optional fields without changing account identity', async () => {
+    const user = {
+      id: 'user-id',
+      name: 'Amina Rahman',
+      username: 'amina_kitchen',
+      email: 'amina@example.com',
+      avatarUrl: 'https://images.example.com/amina.jpg',
+      bio: 'Home cook.',
+      role: 'user' as const,
+      isEmailVerified: false,
+      createdAt: new Date('2026-07-27T08:00:00.000Z'),
+      save: vi.fn().mockResolvedValue(undefined),
+    };
+    findUserByIdMock.mockResolvedValue(user);
+
+    await updateCurrentUser('user-id', { avatarUrl: null, bio: null });
+
+    expect(user.avatarUrl).toBeNull();
+    expect(user.bio).toBeNull();
+    expect(user.username).toBe('amina_kitchen');
+    expect(user.email).toBe('amina@example.com');
+  });
+
+  it('rejects an identity whose user no longer exists', async () => {
+    findUserByIdMock.mockResolvedValue(null);
+
+    await expect(
+      updateCurrentUser('missing-user-id', { name: 'Amina Noor' }),
+    ).rejects.toMatchObject({
       statusCode: 401,
       code: 'UNAUTHORIZED',
     });

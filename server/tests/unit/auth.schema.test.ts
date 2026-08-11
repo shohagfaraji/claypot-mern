@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { loginInputSchema, registerInputSchema } from '../../src/schemas/auth.schema.js';
+import {
+  loginInputSchema,
+  registerInputSchema,
+  updateProfileInputSchema,
+} from '../../src/schemas/auth.schema.js';
 
 const validRegistration = {
   name: '  Amina Rahman  ',
@@ -106,5 +110,34 @@ describe('login input schema', () => {
         }),
       ]),
     );
+  });
+});
+
+describe('profile update input schema', () => {
+  it('normalizes editable profile fields', () => {
+    expect(
+      updateProfileInputSchema.parse({
+        name: '  Amina Noor  ',
+        avatarUrl: '  https://images.example.com/amina.jpg  ',
+        bio: '  Home cook and recipe collector.  ',
+      }),
+    ).toEqual({
+      name: 'Amina Noor',
+      avatarUrl: 'https://images.example.com/amina.jpg',
+      bio: 'Home cook and recipe collector.',
+    });
+  });
+
+  it('allows optional profile fields to be cleared', () => {
+    expect(updateProfileInputSchema.parse({ avatarUrl: null, bio: null })).toEqual({
+      avatarUrl: null,
+      bio: null,
+    });
+  });
+
+  it('rejects empty updates, invalid URLs, and server-controlled fields', () => {
+    expect(updateProfileInputSchema.safeParse({}).success).toBe(false);
+    expect(updateProfileInputSchema.safeParse({ avatarUrl: 'not-a-url' }).success).toBe(false);
+    expect(updateProfileInputSchema.safeParse({ role: 'admin' }).success).toBe(false);
   });
 });

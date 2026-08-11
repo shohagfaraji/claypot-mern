@@ -104,9 +104,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return tokenRenewalRequest.current;
   }, []);
 
+  const updateSessionUser = useCallback((user: AuthUser) => {
+    sessionRestoreRequest = null;
+    setState((current) => ({ ...current, user }));
+  }, []);
+
   const value = useMemo(
-    () => ({ ...state, signIn, signUp, signOut, renewAccessToken }),
-    [renewAccessToken, signIn, signOut, signUp, state],
+    () => ({ ...state, signIn, signUp, signOut, renewAccessToken, updateSessionUser }),
+    [renewAccessToken, signIn, signOut, signUp, state, updateSessionUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
