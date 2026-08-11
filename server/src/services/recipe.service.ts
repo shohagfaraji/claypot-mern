@@ -177,10 +177,17 @@ function getRecipeSort(sort: ListRecipesQuery['sort']): Record<string, 1 | -1> {
   return sorts[sort];
 }
 
-export async function listPublishedRecipes(query: ListRecipesQuery): Promise<PaginatedRecipes> {
+export async function listPublishedRecipes(
+  query: ListRecipesQuery,
+  authorId?: string,
+): Promise<PaginatedRecipes> {
   const match: Record<string, unknown> = {
     status: 'published',
   };
+
+  if (authorId !== undefined) {
+    match.author = new Types.ObjectId(authorId);
+  }
 
   if (query.search !== undefined) {
     match.$text = { $search: query.search };

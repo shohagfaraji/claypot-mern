@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { aggregateRecipesMock } = vi.hoisted(() => ({
@@ -128,6 +129,21 @@ describe('published recipe listing', () => {
         limit: 12,
         total: 0,
         totalPages: 0,
+      },
+    });
+  });
+
+  it('can scope published recipes to one author', async () => {
+    const authorId = '507f1f77bcf86cd799439011';
+    aggregateRecipesMock.mockResolvedValue([]);
+
+    await listPublishedRecipes(defaultQuery, authorId);
+
+    const pipeline = aggregateRecipesMock.mock.calls[0]?.[0] as Array<Record<string, unknown>>;
+    expect(pipeline[0]).toEqual({
+      $match: {
+        status: 'published',
+        author: new Types.ObjectId(authorId),
       },
     });
   });

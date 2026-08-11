@@ -108,7 +108,11 @@ export function RecipeDetailPage() {
                   {recipe.summary}
                 </p>
 
-                <div className="mt-7 flex items-center gap-3">
+                <Link
+                  className="mt-7 flex w-fit items-center gap-3 rounded-lg transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                  to={`/cooks/${recipe.author.username}`}
+                  aria-label={`View ${recipe.author.name}'s profile`}
+                >
                   <div className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary text-sm font-bold text-primary">
                     {recipe.author.avatarUrl ? (
                       <img
@@ -124,7 +128,7 @@ export function RecipeDetailPage() {
                     <p className="text-sm font-semibold">Recipe by {recipe.author.name}</p>
                     <p className="text-sm text-muted-foreground">@{recipe.author.username}</p>
                   </div>
-                </div>
+                </Link>
 
                 <div className="mt-6">
                   {status === 'authenticated' ? (

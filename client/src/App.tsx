@@ -1,34 +1,71 @@
+import { LoaderCircle } from 'lucide-react';
+import { lazy, Suspense } from 'react';
 import { Route, Routes } from 'react-router-dom';
 
 import { ProtectedRoute } from '@/features/auth/components/protected-route';
-import { AccountPage } from '@/pages/account-page';
-import { CreateRecipePage } from '@/pages/create-recipe-page';
-import { HomePage } from '@/pages/home-page';
-import { LoginPage } from '@/pages/login-page';
-import { MyRecipesPage } from '@/pages/my-recipes-page';
-import { NotFoundPage } from '@/pages/not-found-page';
-import { RecipeDetailPage } from '@/pages/recipe-detail-page';
-import { RecipesPage } from '@/pages/recipes-page';
-import { RegisterPage } from '@/pages/register-page';
-import { SavedRecipesPage } from '@/pages/saved-recipes-page';
+
+const AccountPage = lazy(async () => ({
+  default: (await import('@/pages/account-page')).AccountPage,
+}));
+const CreateRecipePage = lazy(async () => ({
+  default: (await import('@/pages/create-recipe-page')).CreateRecipePage,
+}));
+const HomePage = lazy(async () => ({ default: (await import('@/pages/home-page')).HomePage }));
+const LoginPage = lazy(async () => ({ default: (await import('@/pages/login-page')).LoginPage }));
+const MyRecipesPage = lazy(async () => ({
+  default: (await import('@/pages/my-recipes-page')).MyRecipesPage,
+}));
+const NotFoundPage = lazy(async () => ({
+  default: (await import('@/pages/not-found-page')).NotFoundPage,
+}));
+const RecipeDetailPage = lazy(async () => ({
+  default: (await import('@/pages/recipe-detail-page')).RecipeDetailPage,
+}));
+const RecipesPage = lazy(async () => ({
+  default: (await import('@/pages/recipes-page')).RecipesPage,
+}));
+const RegisterPage = lazy(async () => ({
+  default: (await import('@/pages/register-page')).RegisterPage,
+}));
+const SavedRecipesPage = lazy(async () => ({
+  default: (await import('@/pages/saved-recipes-page')).SavedRecipesPage,
+}));
+const UserProfilePage = lazy(async () => ({
+  default: (await import('@/pages/user-profile-page')).UserProfilePage,
+}));
+
+function PageLoader() {
+  return (
+    <div className="grid min-h-svh place-items-center bg-background text-muted-foreground">
+      <div className="text-center">
+        <img className="mx-auto size-16 object-contain" src="/brand/claypot-logo.png" alt="" />
+        <LoaderCircle className="mx-auto mt-5 size-5 animate-spin" />
+        <p className="mt-3 text-sm font-medium">Preparing your page…</p>
+      </div>
+    </div>
+  );
+}
 
 function App() {
   return (
-    <Routes>
-      <Route index element={<HomePage />} />
-      <Route path="login" element={<LoginPage />} />
-      <Route path="register" element={<RegisterPage />} />
-      <Route path="recipes" element={<RecipesPage />} />
-      <Route path="recipes/:slug" element={<RecipeDetailPage />} />
-      <Route element={<ProtectedRoute />}>
-        <Route path="account" element={<AccountPage />} />
-        <Route path="my-recipes" element={<MyRecipesPage />} />
-        <Route path="saved-recipes" element={<SavedRecipesPage />} />
-        <Route path="recipes/new" element={<CreateRecipePage />} />
-        <Route path="my-recipes/:recipeId/edit" element={<CreateRecipePage />} />
-      </Route>
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        <Route index element={<HomePage />} />
+        <Route path="login" element={<LoginPage />} />
+        <Route path="register" element={<RegisterPage />} />
+        <Route path="recipes" element={<RecipesPage />} />
+        <Route path="recipes/:slug" element={<RecipeDetailPage />} />
+        <Route path="cooks/:username" element={<UserProfilePage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="account" element={<AccountPage />} />
+          <Route path="my-recipes" element={<MyRecipesPage />} />
+          <Route path="saved-recipes" element={<SavedRecipesPage />} />
+          <Route path="recipes/new" element={<CreateRecipePage />} />
+          <Route path="my-recipes/:recipeId/edit" element={<CreateRecipePage />} />
+        </Route>
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </Suspense>
   );
 }
 
