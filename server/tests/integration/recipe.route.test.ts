@@ -7,6 +7,7 @@ const {
   deleteRecipeMock,
   getAuthorRecipeMock,
   getPublishedRecipeBySlugMock,
+  isRecipeSavedMock,
   listAuthorRecipesMock,
   listPublishedRecipesMock,
   listSavedRecipesMock,
@@ -21,6 +22,7 @@ const {
   deleteRecipeMock: vi.fn(),
   getAuthorRecipeMock: vi.fn(),
   getPublishedRecipeBySlugMock: vi.fn(),
+  isRecipeSavedMock: vi.fn(),
   listAuthorRecipesMock: vi.fn(),
   listPublishedRecipesMock: vi.fn(),
   listSavedRecipesMock: vi.fn(),
@@ -62,6 +64,7 @@ vi.mock('../../src/services/recipe.service.js', () => ({
 }));
 
 vi.mock('../../src/services/saved-recipe.service.js', () => ({
+  isRecipeSaved: isRecipeSavedMock,
   listSavedRecipes: listSavedRecipesMock,
   saveRecipe: saveRecipeMock,
   unsaveRecipe: unsaveRecipeMock,
@@ -291,6 +294,38 @@ describe('PUT /api/v1/recipes/:recipeId/save', () => {
       .expect(404);
 
     expect(response.body.error.code).toBe('RECIPE_NOT_FOUND');
+  });
+});
+
+describe('GET /api/v1/recipes/:recipeId/save', () => {
+  const app = createApp();
+  const recipeId = '507f1f77bcf86cd799439012';
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('returns the current user saved state', async () => {
+    verifyAccessTokenMock.mockResolvedValue({
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+    isRecipeSavedMock.mockResolvedValue(true);
+
+    const response = await request(app)
+      .get(`/api/v1/recipes/${recipeId}/save`)
+      .set('Authorization', 'Bearer signed-access-token')
+      .expect(200);
+
+    expect(isRecipeSavedMock).toHaveBeenCalledWith('507f1f77bcf86cd799439011', recipeId);
+    expect(response.body).toEqual({ data: { isSaved: true } });
+  });
+
+  it('authenticates before validating the recipe ID', async () => {
+    const response = await request(app).get('/api/v1/recipes/invalid-id/save').expect(401);
+
+    expect(isRecipeSavedMock).not.toHaveBeenCalled();
+    expect(response.body.error.code).toBe('UNAUTHORIZED');
   });
 });
 

@@ -13,6 +13,8 @@ interface RecipeGridProps {
   emptyTitle?: string;
   emptyDescription?: string;
   skeletonCount?: number;
+  removingId?: string | null;
+  onRemove?: (recipe: RecipeListItem) => void;
 }
 
 function RecipeCardSkeleton() {
@@ -46,6 +48,8 @@ export function RecipeGrid({
   emptyTitle = 'No recipes found',
   emptyDescription = 'Try changing your search or filters to discover more recipes.',
   skeletonCount = 6,
+  removingId = null,
+  onRemove,
 }: RecipeGridProps) {
   if (isLoading) {
     return (
@@ -87,7 +91,13 @@ export function RecipeGrid({
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       {recipes.map((recipe) => (
-        <RecipeCard key={recipe.id} recipe={recipe} />
+        <RecipeCard
+          key={recipe.id}
+          recipe={recipe}
+          isRemoveDisabled={removingId !== null}
+          isRemoving={removingId === recipe.id}
+          onRemove={onRemove}
+        />
       ))}
     </div>
   );

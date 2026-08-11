@@ -1,12 +1,14 @@
 import { Types } from 'mongoose';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { aggregateMock, deleteOneMock, recipeExistsMock, updateOneMock } = vi.hoisted(() => ({
-  aggregateMock: vi.fn(),
-  deleteOneMock: vi.fn(),
-  recipeExistsMock: vi.fn(),
-  updateOneMock: vi.fn(),
-}));
+const { aggregateMock, deleteOneMock, recipeExistsMock, savedRecipeExistsMock, updateOneMock } =
+  vi.hoisted(() => ({
+    aggregateMock: vi.fn(),
+    deleteOneMock: vi.fn(),
+    recipeExistsMock: vi.fn(),
+    savedRecipeExistsMock: vi.fn(),
+    updateOneMock: vi.fn(),
+  }));
 
 vi.mock('../../src/models/recipe.model.js', () => ({
   RecipeModel: {
@@ -18,11 +20,13 @@ vi.mock('../../src/models/saved-recipe.model.js', () => ({
   SavedRecipeModel: {
     aggregate: aggregateMock,
     deleteOne: deleteOneMock,
+    exists: savedRecipeExistsMock,
     updateOne: updateOneMock,
   },
 }));
 
 import {
+  isRecipeSaved,
   listSavedRecipes,
   saveRecipe,
   unsaveRecipe,
@@ -70,6 +74,19 @@ describe('saved recipes', () => {
       user: new Types.ObjectId(userId),
       recipe: new Types.ObjectId(recipeId),
     });
+  });
+
+  it('checks whether a recipe is in the current user collection', async () => {
+    savedRecipeExistsMock.mockResolvedValue({ _id: new Types.ObjectId() });
+
+    await expect(isRecipeSaved(userId, recipeId)).resolves.toBe(true);
+    expect(savedRecipeExistsMock).toHaveBeenCalledWith({
+      user: new Types.ObjectId(userId),
+      recipe: new Types.ObjectId(recipeId),
+    });
+
+    savedRecipeExistsMock.mockResolvedValue(null);
+    await expect(isRecipeSaved(userId, recipeId)).resolves.toBe(false);
   });
 
   it('lists only published saved recipes with pagination', async () => {

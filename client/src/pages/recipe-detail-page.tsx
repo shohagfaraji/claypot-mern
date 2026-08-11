@@ -1,11 +1,22 @@
-import { ArrowLeft, ChefHat, Clock3, RefreshCw, Users } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import {
+  ArrowLeft,
+  Bookmark,
+  BookmarkCheck,
+  ChefHat,
+  Clock3,
+  LoaderCircle,
+  RefreshCw,
+  Users,
+} from 'lucide-react';
+import { Link, useLocation, useParams } from 'react-router-dom';
 
 import { AppShell } from '@/components/layout/app-shell';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useRecipe } from '@/features/recipes/hooks/use-recipe';
+import { useSavedRecipeStatus } from '@/features/recipes/hooks/use-saved-recipe-status';
 import { getInitials } from '@/lib/get-initials';
 import { cn } from '@/lib/utils';
 import { NotFoundPage } from '@/pages/not-found-page';
@@ -36,7 +47,13 @@ function RecipeDetailSkeleton() {
 
 export function RecipeDetailPage() {
   const { slug = '' } = useParams();
+  const location = useLocation();
+  const { status } = useAuth();
   const { recipe, isLoading, error, isNotFound, retry } = useRecipe(slug);
+  const savedStatus = useSavedRecipeStatus(
+    recipe?.id ?? '',
+    status === 'authenticated' && recipe !== null,
+  );
 
   if (isLoading) {
     return <RecipeDetailSkeleton />;
@@ -107,6 +124,56 @@ export function RecipeDetailPage() {
                     <p className="text-sm font-semibold">Recipe by {recipe.author.name}</p>
                     <p className="text-sm text-muted-foreground">@{recipe.author.username}</p>
                   </div>
+                </div>
+
+                <div className="mt-6">
+                  {status === 'authenticated' ? (
+                    <Button
+                      type="button"
+                      variant={savedStatus.isSaved ? 'secondary' : 'outline'}
+                      disabled={savedStatus.isLoading || savedStatus.isUpdating}
+                      onClick={() => void savedStatus.toggle()}
+                    >
+                      {savedStatus.isLoading || savedStatus.isUpdating ? (
+                        <LoaderCircle className="animate-spin" />
+                      ) : savedStatus.isSaved ? (
+                        <BookmarkCheck />
+                      ) : (
+                        <Bookmark />
+                      )}
+                      {savedStatus.isLoading
+                        ? 'Checking collection…'
+                        : savedStatus.isUpdating
+                          ? savedStatus.isSaved
+                            ? 'Removing…'
+                            : 'Saving…'
+                          : savedStatus.isSaved
+                            ? 'Saved to collection'
+                            : 'Save recipe'}
+                    </Button>
+                  ) : status === 'unauthenticated' ? (
+                    <Link
+                      className={buttonVariants({ variant: 'outline' })}
+                      to="/login"
+                      state={{
+                        from: `${location.pathname}${location.search}${location.hash}`,
+                      }}
+                    >
+                      <Bookmark />
+                      Sign in to save
+                    </Link>
+                  ) : (
+                    <Button type="button" variant="outline" disabled>
+                      <LoaderCircle className="animate-spin" />
+                      Checking session…
+                    </Button>
+                  )}
+
+                  {savedStatus.error && (
+                    <p className="mt-2 text-sm text-destructive" role="alert">
+                      {savedStatus.error}
+                    </p>
+                  )}
                 </div>
 
                 <dl className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border bg-border sm:grid-cols-4">

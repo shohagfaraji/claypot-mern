@@ -34,6 +34,15 @@ export interface RecipeListData {
   pagination: RecipePagination;
 }
 
+export interface SavedRecipeListItem extends RecipeListItem {
+  savedAt: string;
+}
+
+export interface SavedRecipeListData {
+  recipes: SavedRecipeListItem[];
+  pagination: RecipePagination;
+}
+
 export interface RecipeDetail extends RecipeListItem {
   ingredients: Array<{
     name: string;

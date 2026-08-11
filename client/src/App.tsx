@@ -10,6 +10,7 @@ import { NotFoundPage } from '@/pages/not-found-page';
 import { RecipeDetailPage } from '@/pages/recipe-detail-page';
 import { RecipesPage } from '@/pages/recipes-page';
 import { RegisterPage } from '@/pages/register-page';
+import { SavedRecipesPage } from '@/pages/saved-recipes-page';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
       <Route element={<ProtectedRoute />}>
         <Route path="account" element={<AccountPage />} />
         <Route path="my-recipes" element={<MyRecipesPage />} />
+        <Route path="saved-recipes" element={<SavedRecipesPage />} />
         <Route path="recipes/new" element={<CreateRecipePage />} />
         <Route path="my-recipes/:recipeId/edit" element={<CreateRecipePage />} />
       </Route>

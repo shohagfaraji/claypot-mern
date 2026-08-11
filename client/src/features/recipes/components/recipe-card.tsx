@@ -1,18 +1,27 @@
-import { Clock3 } from 'lucide-react';
+import { BookmarkX, Clock3, LoaderCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import type { RecipeListItem } from '@/features/recipes/types';
 import { getInitials } from '@/lib/get-initials';
 
 interface RecipeCardProps {
   recipe: RecipeListItem;
+  isRemoveDisabled?: boolean;
+  isRemoving?: boolean;
+  onRemove?: (recipe: RecipeListItem) => void;
 }
 
-export function RecipeCard({ recipe }: RecipeCardProps) {
+export function RecipeCard({
+  recipe,
+  isRemoveDisabled = false,
+  isRemoving = false,
+  onRemove,
+}: RecipeCardProps) {
   return (
-    <Card className="group gap-0 overflow-hidden border-border/70 py-0 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/8">
+    <Card className="group relative gap-0 overflow-hidden border-border/70 py-0 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/8">
       <Link
         className="relative block aspect-[4/3] overflow-hidden bg-[radial-gradient(circle_at_72%_24%,color-mix(in_oklch,var(--accent),white_14%),transparent_32%),linear-gradient(145deg,var(--secondary),color-mix(in_oklch,var(--accent),white_48%))] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
         to={`/recipes/${recipe.slug}`}
@@ -40,6 +49,20 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
           {recipe.category}
         </Badge>
       </Link>
+
+      {onRemove && (
+        <Button
+          className="absolute top-4 right-4 z-10 shadow-sm"
+          type="button"
+          variant="secondary"
+          size="icon"
+          aria-label={`Remove ${recipe.title} from saved recipes`}
+          disabled={isRemoveDisabled || isRemoving}
+          onClick={() => onRemove(recipe)}
+        >
+          {isRemoving ? <LoaderCircle className="animate-spin" /> : <BookmarkX />}
+        </Button>
+      )}
 
       <CardContent className="flex flex-1 flex-col p-5 sm:p-6">
         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">

@@ -64,6 +64,15 @@ export async function unsaveRecipe(userId: string, recipeId: string): Promise<vo
   });
 }
 
+export async function isRecipeSaved(userId: string, recipeId: string): Promise<boolean> {
+  const savedRecipe = await SavedRecipeModel.exists({
+    user: new Types.ObjectId(userId),
+    recipe: new Types.ObjectId(recipeId),
+  });
+
+  return savedRecipe !== null;
+}
+
 export async function listSavedRecipes(
   userId: string,
   query: ListSavedRecipesQuery,
