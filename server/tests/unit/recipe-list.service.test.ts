@@ -40,6 +40,8 @@ describe('published recipe listing', () => {
       category: 'Main course',
       tags: ['rice'],
       publishedAt: new Date('2026-08-05T08:00:00.000Z'),
+      averageRating: 4.5,
+      reviewCount: 8,
       author: {
         id: 'user-id',
         name: 'Amina Rahman',
@@ -80,6 +82,29 @@ describe('published recipe listing', () => {
     };
 
     expect(facet.items.slice(0, 2)).toEqual([{ $skip: 0 }, { $limit: 12 }]);
+    expect(facet.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          $lookup: expect.objectContaining({ from: 'reviews', as: 'reviewSummary' }),
+        }),
+        expect.objectContaining({
+          $set: {
+            reviewSummary: {
+              $ifNull: [
+                { $arrayElemAt: ['$reviewSummary', 0] },
+                { averageRating: 0, reviewCount: 0 },
+              ],
+            },
+          },
+        }),
+      ]),
+    );
+    expect(facet.items.at(-1)).toMatchObject({
+      $project: {
+        averageRating: '$reviewSummary.averageRating',
+        reviewCount: '$reviewSummary.reviewCount',
+      },
+    });
     expect(facet.metadata).toEqual([{ $count: 'total' }]);
   });
 

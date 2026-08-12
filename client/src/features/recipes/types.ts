@@ -14,6 +14,8 @@ export interface RecipeListItem {
   category: string;
   tags: string[];
   publishedAt: string;
+  averageRating: number;
+  reviewCount: number;
   author: {
     id: string;
     name: string;
@@ -43,7 +45,7 @@ export interface SavedRecipeListData {
   pagination: RecipePagination;
 }
 
-export interface RecipeDetail extends RecipeListItem {
+export interface RecipeDetail extends Omit<RecipeListItem, 'averageRating' | 'reviewCount'> {
   ingredients: Array<{
     name: string;
     quantity: string;

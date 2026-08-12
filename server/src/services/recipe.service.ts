@@ -31,6 +31,8 @@ export interface RecipeListItem {
   category: string;
   tags: string[];
   publishedAt: Date;
+  averageRating: number;
+  reviewCount: number;
   author: {
     id: string;
     name: string;
@@ -39,7 +41,8 @@ export interface RecipeListItem {
   };
 }
 
-export interface RecipeDetail extends Omit<RecipeListItem, 'totalTimeMinutes'> {
+export interface RecipeDetail
+  extends Omit<RecipeListItem, 'totalTimeMinutes' | 'averageRating' | 'reviewCount'> {
   ingredients: Recipe['ingredients'];
   instructions: Recipe['instructions'];
   servings: number;
@@ -233,6 +236,37 @@ export async function listPublishedRecipes(
           },
           { $unwind: '$authorProfile' },
           {
+            $lookup: {
+              from: 'reviews',
+              let: { recipeId: '$_id' },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: { $eq: ['$recipe', '$$recipeId'] },
+                  },
+                },
+                {
+                  $group: {
+                    _id: null,
+                    averageRating: { $avg: '$rating' },
+                    reviewCount: { $sum: 1 },
+                  },
+                },
+              ],
+              as: 'reviewSummary',
+            },
+          },
+          {
+            $set: {
+              reviewSummary: {
+                $ifNull: [
+                  { $arrayElemAt: ['$reviewSummary', 0] },
+                  { averageRating: 0, reviewCount: 0 },
+                ],
+              },
+            },
+          },
+          {
             $project: {
               _id: 0,
               id: { $toString: '$_id' },
@@ -248,6 +282,8 @@ export async function listPublishedRecipes(
               category: 1,
               tags: 1,
               publishedAt: 1,
+              averageRating: '$reviewSummary.averageRating',
+              reviewCount: '$reviewSummary.reviewCount',
               author: {
                 id: { $toString: '$authorProfile._id' },
                 name: '$authorProfile.name',

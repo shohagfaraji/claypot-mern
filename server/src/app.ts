@@ -11,6 +11,7 @@ import { notFound } from './middleware/not-found.js';
 import { authRouter } from './routes/auth.route.js';
 import { healthRouter } from './routes/health.route.js';
 import { recipeRouter } from './routes/recipe.route.js';
+import { reviewRouter } from './routes/review.route.js';
 import { userRouter } from './routes/user.route.js';
 
 export function createApp() {
@@ -44,6 +45,7 @@ export function createApp() {
   app.use('/api/v1/health', healthRouter);
   app.use('/api/v1/auth', authRouter);
   app.use('/api/v1/recipes', recipeRouter);
+  app.use('/api/v1/reviews', reviewRouter);
   app.use('/api/v1/users', userRouter);
 
   app.use(notFound);

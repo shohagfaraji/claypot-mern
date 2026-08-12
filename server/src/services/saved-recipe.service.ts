@@ -143,6 +143,37 @@ export async function listSavedRecipes(
           },
           { $unwind: '$authorProfile' },
           {
+            $lookup: {
+              from: 'reviews',
+              let: { recipeId: '$recipe._id' },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: { $eq: ['$recipe', '$$recipeId'] },
+                  },
+                },
+                {
+                  $group: {
+                    _id: null,
+                    averageRating: { $avg: '$rating' },
+                    reviewCount: { $sum: 1 },
+                  },
+                },
+              ],
+              as: 'reviewSummary',
+            },
+          },
+          {
+            $set: {
+              reviewSummary: {
+                $ifNull: [
+                  { $arrayElemAt: ['$reviewSummary', 0] },
+                  { averageRating: 0, reviewCount: 0 },
+                ],
+              },
+            },
+          },
+          {
             $project: {
               _id: 0,
               id: { $toString: '$recipe._id' },
@@ -159,6 +190,8 @@ export async function listSavedRecipes(
               tags: '$recipe.tags',
               publishedAt: '$recipe.publishedAt',
               savedAt: '$createdAt',
+              averageRating: '$reviewSummary.averageRating',
+              reviewCount: '$reviewSummary.reviewCount',
               author: {
                 id: { $toString: '$authorProfile._id' },
                 name: '$authorProfile.name',

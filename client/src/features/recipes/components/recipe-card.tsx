@@ -1,4 +1,4 @@
-import { BookmarkX, Clock3, LoaderCircle } from 'lucide-react';
+import { BookmarkX, Clock3, LoaderCircle, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
@@ -48,6 +48,24 @@ export function RecipeCard({
         <Badge className="absolute top-4 left-4 bg-card/90 text-foreground shadow-sm backdrop-blur-sm">
           {recipe.category}
         </Badge>
+        <span
+          className="absolute right-4 bottom-4 inline-flex items-center gap-1.5 rounded-full bg-card/90 px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm backdrop-blur-sm"
+          aria-label={
+            recipe.reviewCount > 0
+              ? `${recipe.averageRating.toFixed(1)} out of 5 from ${recipe.reviewCount} ${recipe.reviewCount === 1 ? 'review' : 'reviews'}`
+              : 'No reviews yet'
+          }
+        >
+          <Star className="size-3.5 fill-primary text-primary" aria-hidden="true" />
+          {recipe.reviewCount > 0 ? (
+            <>
+              {recipe.averageRating.toFixed(1)}
+              <span className="font-normal text-muted-foreground">({recipe.reviewCount})</span>
+            </>
+          ) : (
+            <span>New</span>
+          )}
+        </span>
       </Link>
 
       {onRemove && (

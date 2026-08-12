@@ -134,6 +134,26 @@ describe('saved recipes', () => {
         'recipe.status' in stage.$match,
     )?.$match as { $or: Array<Record<string, RegExp>> };
     expect(recipeMatch.$or[0]?.['recipe.title']?.source).toBe('rice\\.\\*');
+    const facet = pipeline.find((stage) => '$facet' in stage)?.$facet as {
+      items: Array<Record<string, unknown>>;
+    };
+    expect(facet.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          $lookup: expect.objectContaining({
+            from: 'reviews',
+            let: { recipeId: '$recipe._id' },
+            as: 'reviewSummary',
+          }),
+        }),
+      ]),
+    );
+    expect(facet.items.at(-1)).toMatchObject({
+      $project: {
+        averageRating: '$reviewSummary.averageRating',
+        reviewCount: '$reviewSummary.reviewCount',
+      },
+    });
   });
 
   it('returns an empty first page when no recipes are saved', async () => {

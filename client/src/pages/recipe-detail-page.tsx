@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useRecipe } from '@/features/recipes/hooks/use-recipe';
 import { useSavedRecipeStatus } from '@/features/recipes/hooks/use-saved-recipe-status';
+import { RecipeReviews } from '@/features/reviews/components/recipe-reviews';
 import { getInitials } from '@/lib/get-initials';
 import { cn } from '@/lib/utils';
 import { NotFoundPage } from '@/pages/not-found-page';
@@ -286,6 +287,7 @@ export function RecipeDetailPage() {
             </Link>
           </section>
         </div>
+        <RecipeReviews recipeId={recipe.id} authorId={recipe.author.id} />
       </article>
     </AppShell>
   );
