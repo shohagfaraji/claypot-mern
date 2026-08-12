@@ -196,6 +196,39 @@ export async function listReviews(
   };
 }
 
+export async function getCurrentUserReview(
+  recipeId: string,
+  userId: string,
+): Promise<PublicReview | null> {
+  const publishedRecipeExists = await RecipeModel.exists({
+    _id: new Types.ObjectId(recipeId),
+    status: 'published',
+  });
+
+  if (publishedRecipeExists === null) {
+    throw new AppError(404, 'RECIPE_NOT_FOUND', 'Recipe was not found.');
+  }
+
+  const review = await ReviewModel.findOne({
+    recipe: new Types.ObjectId(recipeId),
+    user: new Types.ObjectId(userId),
+  });
+
+  if (review === null) return null;
+
+  const populatedReview = await review.populate<{ user: PublicReview['user'] }>({
+    path: 'user',
+    select: 'name username avatarUrl',
+  });
+
+  return toOwnedReview(review, {
+    id: populatedReview.user.id,
+    name: populatedReview.user.name,
+    username: populatedReview.user.username,
+    avatarUrl: populatedReview.user.avatarUrl,
+  });
+}
+
 export async function updateReview(
   reviewId: string,
   userId: string,

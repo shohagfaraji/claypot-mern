@@ -11,7 +11,11 @@ import {
   update,
 } from '../controllers/recipe.controller.js';
 import { listSaved, save, status, unsave } from '../controllers/saved-recipe.controller.js';
-import { create as createReview, list as listReviews } from '../controllers/review.controller.js';
+import {
+  create as createReview,
+  list as listReviews,
+  mine as currentUserReview,
+} from '../controllers/review.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { validateBody, validateParams, validateQuery } from '../middleware/validate-request.js';
 import {
@@ -31,6 +35,12 @@ recipeRouter.get('/mine', authenticate, validateQuery(listOwnRecipesQuerySchema)
 recipeRouter.get('/mine/:recipeId', authenticate, validateParams(recipeIdParamsSchema), mineDetail);
 recipeRouter.get('/saved', authenticate, validateQuery(listSavedRecipesQuerySchema), listSaved);
 recipeRouter.get('/:recipeId/save', authenticate, validateParams(recipeIdParamsSchema), status);
+recipeRouter.get(
+  '/:recipeId/reviews/mine',
+  authenticate,
+  validateParams(recipeIdParamsSchema),
+  currentUserReview,
+);
 recipeRouter.get(
   '/:recipeId/reviews',
   validateParams(recipeIdParamsSchema),

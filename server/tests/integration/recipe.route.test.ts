@@ -8,6 +8,7 @@ const {
   deleteRecipeMock,
   getAuthorRecipeMock,
   getPublishedRecipeBySlugMock,
+  getCurrentUserReviewMock,
   isRecipeSavedMock,
   listAuthorRecipesMock,
   listPublishedRecipesMock,
@@ -25,6 +26,7 @@ const {
   deleteRecipeMock: vi.fn(),
   getAuthorRecipeMock: vi.fn(),
   getPublishedRecipeBySlugMock: vi.fn(),
+  getCurrentUserReviewMock: vi.fn(),
   isRecipeSavedMock: vi.fn(),
   listAuthorRecipesMock: vi.fn(),
   listPublishedRecipesMock: vi.fn(),
@@ -76,6 +78,7 @@ vi.mock('../../src/services/saved-recipe.service.js', () => ({
 
 vi.mock('../../src/services/review.service.js', () => ({
   createReview: createReviewMock,
+  getCurrentUserReview: getCurrentUserReviewMock,
   listReviews: listReviewsMock,
 }));
 
@@ -452,6 +455,53 @@ describe('POST /api/v1/recipes/:recipeId/reviews', () => {
       .expect(401);
 
     expect(createReviewMock).not.toHaveBeenCalled();
+    expect(response.body.error.code).toBe('UNAUTHORIZED');
+  });
+});
+
+describe('GET /api/v1/recipes/:recipeId/reviews/mine', () => {
+  const app = createApp();
+  const recipeId = '507f1f77bcf86cd799439012';
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('returns the authenticated user review when one exists', async () => {
+    verifyAccessTokenMock.mockResolvedValue({
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+    getCurrentUserReviewMock.mockResolvedValue({ id: 'review-id', rating: 5 });
+
+    const response = await request(app)
+      .get(`/api/v1/recipes/${recipeId}/reviews/mine`)
+      .set('Authorization', 'Bearer signed-access-token')
+      .expect(200);
+
+    expect(getCurrentUserReviewMock).toHaveBeenCalledWith(recipeId, '507f1f77bcf86cd799439011');
+    expect(response.body.data.review).toMatchObject({ id: 'review-id', rating: 5 });
+  });
+
+  it('returns null when the user has not reviewed the recipe', async () => {
+    verifyAccessTokenMock.mockResolvedValue({
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+    getCurrentUserReviewMock.mockResolvedValue(null);
+
+    const response = await request(app)
+      .get(`/api/v1/recipes/${recipeId}/reviews/mine`)
+      .set('Authorization', 'Bearer signed-access-token')
+      .expect(200);
+
+    expect(response.body).toEqual({ data: { review: null } });
+  });
+
+  it('requires authentication before identifier validation', async () => {
+    const response = await request(app).get('/api/v1/recipes/invalid-id/reviews/mine').expect(401);
+
+    expect(getCurrentUserReviewMock).not.toHaveBeenCalled();
     expect(response.body.error.code).toBe('UNAUTHORIZED');
   });
 });

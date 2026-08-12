@@ -10,6 +10,7 @@ import type {
 import {
   createReview,
   deleteReview,
+  getCurrentUserReview,
   listReviews,
   updateReview,
 } from '../services/review.service.js';
@@ -36,6 +37,17 @@ export const create: RequestHandler = async (request, response) => {
   const review = await createReview(recipeId, request.auth, request.body as CreateReviewInput);
 
   response.status(201).json({ data: { review } });
+};
+
+export const mine: RequestHandler = async (request, response) => {
+  if (request.auth === undefined) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  const { recipeId } = request.validatedParams as RecipeIdParams;
+  const review = await getCurrentUserReview(recipeId, request.auth.userId);
+
+  response.status(200).json({ data: { review } });
 };
 
 export const update: RequestHandler = async (request, response) => {

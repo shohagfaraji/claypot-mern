@@ -35,6 +35,7 @@ vi.mock('../../src/models/review.model.js', () => ({
 import {
   createReview,
   deleteReview,
+  getCurrentUserReview,
   listReviews,
   updateReview,
 } from '../../src/services/review.service.js';
@@ -144,6 +145,23 @@ describe('review service', () => {
       listReviews(recipeId, { page: 1, limit: 10, sort: 'newest' }),
     ).rejects.toMatchObject({ statusCode: 404, code: 'RECIPE_NOT_FOUND' });
     expect(aggregateMock).not.toHaveBeenCalled();
+  });
+
+  it('returns the current user review independently of list pagination', async () => {
+    const review = createReviewDocument();
+    findReviewMock.mockResolvedValue(review);
+
+    await expect(getCurrentUserReview(recipeId, userId)).resolves.toMatchObject({
+      id: reviewId,
+      user: { id: userId },
+    });
+    expect(findReviewMock).toHaveBeenCalledWith({
+      recipe: new Types.ObjectId(recipeId),
+      user: new Types.ObjectId(userId),
+    });
+
+    findReviewMock.mockResolvedValue(null);
+    await expect(getCurrentUserReview(recipeId, userId)).resolves.toBeNull();
   });
 
   it('updates only a review owned by the current user', async () => {
