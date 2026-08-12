@@ -4,12 +4,14 @@ import { AppError } from '../../src/errors/app-error.js';
 
 const {
   createRecipeMock,
+  createReviewMock,
   deleteRecipeMock,
   getAuthorRecipeMock,
   getPublishedRecipeBySlugMock,
   isRecipeSavedMock,
   listAuthorRecipesMock,
   listPublishedRecipesMock,
+  listReviewsMock,
   listSavedRecipesMock,
   publishRecipeMock,
   saveRecipeMock,
@@ -19,12 +21,14 @@ const {
   verifyAccessTokenMock,
 } = vi.hoisted(() => ({
   createRecipeMock: vi.fn(),
+  createReviewMock: vi.fn(),
   deleteRecipeMock: vi.fn(),
   getAuthorRecipeMock: vi.fn(),
   getPublishedRecipeBySlugMock: vi.fn(),
   isRecipeSavedMock: vi.fn(),
   listAuthorRecipesMock: vi.fn(),
   listPublishedRecipesMock: vi.fn(),
+  listReviewsMock: vi.fn(),
   listSavedRecipesMock: vi.fn(),
   publishRecipeMock: vi.fn(),
   saveRecipeMock: vi.fn(),
@@ -68,6 +72,11 @@ vi.mock('../../src/services/saved-recipe.service.js', () => ({
   listSavedRecipes: listSavedRecipesMock,
   saveRecipe: saveRecipeMock,
   unsaveRecipe: unsaveRecipeMock,
+}));
+
+vi.mock('../../src/services/review.service.js', () => ({
+  createReview: createReviewMock,
+  listReviews: listReviewsMock,
 }));
 
 import { createApp } from '../../src/app.js';
@@ -356,6 +365,93 @@ describe('DELETE /api/v1/recipes/:recipeId/save', () => {
     const response = await request(app).delete('/api/v1/recipes/invalid-id/save').expect(401);
 
     expect(unsaveRecipeMock).not.toHaveBeenCalled();
+    expect(response.body.error.code).toBe('UNAUTHORIZED');
+  });
+});
+
+describe('GET /api/v1/recipes/:recipeId/reviews', () => {
+  const app = createApp();
+  const recipeId = '507f1f77bcf86cd799439012';
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('returns public reviews and aggregate rating data', async () => {
+    listReviewsMock.mockResolvedValue({
+      items: [{ id: 'review-id', rating: 5, comment: 'An excellent recipe.' }],
+      summary: { averageRating: 4.7, reviewCount: 12 },
+      pagination: { page: 1, limit: 5, total: 12, totalPages: 3 },
+    });
+
+    const response = await request(app)
+      .get(`/api/v1/recipes/${recipeId}/reviews`)
+      .query({ limit: '5', sort: 'highest' })
+      .expect(200);
+
+    expect(listReviewsMock).toHaveBeenCalledWith(recipeId, {
+      page: 1,
+      limit: 5,
+      sort: 'highest',
+    });
+    expect(response.body.data).toMatchObject({
+      reviews: [{ rating: 5 }],
+      summary: { averageRating: 4.7, reviewCount: 12 },
+      pagination: { totalPages: 3 },
+    });
+  });
+
+  it('validates recipe identifiers and list options', async () => {
+    const response = await request(app)
+      .get('/api/v1/recipes/invalid-id/reviews')
+      .query({ sort: 'popular' })
+      .expect(400);
+
+    expect(listReviewsMock).not.toHaveBeenCalled();
+    expect(response.body.error.code).toBe('VALIDATION_ERROR');
+  });
+});
+
+describe('POST /api/v1/recipes/:recipeId/reviews', () => {
+  const app = createApp();
+  const recipeId = '507f1f77bcf86cd799439012';
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('creates a review for the authenticated user', async () => {
+    verifyAccessTokenMock.mockResolvedValue({
+      userId: '507f1f77bcf86cd799439011',
+      role: 'user',
+    });
+    createReviewMock.mockResolvedValue({
+      id: 'review-id',
+      rating: 5,
+      comment: 'Clear instructions and an excellent result.',
+    });
+
+    const response = await request(app)
+      .post(`/api/v1/recipes/${recipeId}/reviews`)
+      .set('Authorization', 'Bearer signed-access-token')
+      .send({ rating: 5, comment: '  Clear instructions and an excellent result.  ' })
+      .expect(201);
+
+    expect(createReviewMock).toHaveBeenCalledWith(
+      recipeId,
+      { userId: '507f1f77bcf86cd799439011', role: 'user' },
+      { rating: 5, comment: 'Clear instructions and an excellent result.' },
+    );
+    expect(response.body.data.review.rating).toBe(5);
+  });
+
+  it('authenticates before validating review content', async () => {
+    const response = await request(app)
+      .post(`/api/v1/recipes/${recipeId}/reviews`)
+      .send({})
+      .expect(401);
+
+    expect(createReviewMock).not.toHaveBeenCalled();
     expect(response.body.error.code).toBe('UNAUTHORIZED');
   });
 });

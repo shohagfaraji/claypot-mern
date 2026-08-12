@@ -1,0 +1,181 @@
+import { Types } from 'mongoose';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const {
+  aggregateMock,
+  createReviewMock,
+  deleteReviewMock,
+  findRecipeMock,
+  findReviewMock,
+  recipeExistsMock,
+  selectRecipeMock,
+} = vi.hoisted(() => ({
+  aggregateMock: vi.fn(),
+  createReviewMock: vi.fn(),
+  deleteReviewMock: vi.fn(),
+  findRecipeMock: vi.fn(),
+  findReviewMock: vi.fn(),
+  recipeExistsMock: vi.fn(),
+  selectRecipeMock: vi.fn(),
+}));
+
+vi.mock('../../src/models/recipe.model.js', () => ({
+  RecipeModel: { exists: recipeExistsMock, findOne: findRecipeMock },
+}));
+
+vi.mock('../../src/models/review.model.js', () => ({
+  ReviewModel: {
+    aggregate: aggregateMock,
+    create: createReviewMock,
+    findOne: findReviewMock,
+    findOneAndDelete: deleteReviewMock,
+  },
+}));
+
+import {
+  createReview,
+  deleteReview,
+  listReviews,
+  updateReview,
+} from '../../src/services/review.service.js';
+
+const recipeId = '507f1f77bcf86cd799439012';
+const userId = '507f1f77bcf86cd799439011';
+const reviewId = '507f1f77bcf86cd799439013';
+
+function createReviewDocument() {
+  const document = {
+    id: reviewId,
+    rating: 5,
+    comment: 'Clear instructions and an excellent result.',
+    createdAt: new Date('2026-08-12T08:00:00.000Z'),
+    updatedAt: new Date('2026-08-12T08:00:00.000Z'),
+    save: vi.fn().mockResolvedValue(undefined),
+    populate: vi.fn(),
+  };
+  document.populate.mockResolvedValue({
+    ...document,
+    user: {
+      id: userId,
+      name: 'Amina Noor',
+      username: 'amina_kitchen',
+      avatarUrl: null,
+    },
+  });
+  return document;
+}
+
+describe('review service', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    findRecipeMock.mockReturnValue({ select: selectRecipeMock });
+    recipeExistsMock.mockResolvedValue({ _id: new Types.ObjectId(recipeId) });
+  });
+
+  it('creates one review for another cook published recipe', async () => {
+    const review = createReviewDocument();
+    selectRecipeMock.mockResolvedValue({ author: new Types.ObjectId() });
+    createReviewMock.mockResolvedValue(review);
+
+    const result = await createReview(
+      recipeId,
+      { userId, role: 'user' },
+      {
+        rating: 5,
+        comment: 'Clear instructions and an excellent result.',
+      },
+    );
+
+    expect(findRecipeMock).toHaveBeenCalledWith({
+      _id: new Types.ObjectId(recipeId),
+      status: 'published',
+    });
+    expect(createReviewMock).toHaveBeenCalledWith({
+      recipe: new Types.ObjectId(recipeId),
+      user: new Types.ObjectId(userId),
+      rating: 5,
+      comment: 'Clear instructions and an excellent result.',
+    });
+    expect(result).toMatchObject({ id: reviewId, rating: 5, user: { username: 'amina_kitchen' } });
+  });
+
+  it('rejects reviews for private, missing, or owned recipes', async () => {
+    selectRecipeMock.mockResolvedValue(null);
+    await expect(
+      createReview(recipeId, { userId, role: 'user' }, { rating: 5, comment: 'Excellent recipe.' }),
+    ).rejects.toMatchObject({ code: 'RECIPE_NOT_FOUND' });
+
+    selectRecipeMock.mockResolvedValue({ author: new Types.ObjectId(userId) });
+    await expect(
+      createReview(recipeId, { userId, role: 'user' }, { rating: 5, comment: 'Excellent recipe.' }),
+    ).rejects.toMatchObject({ statusCode: 403, code: 'OWN_RECIPE_REVIEW' });
+  });
+
+  it('returns a conflict when the user already reviewed the recipe', async () => {
+    selectRecipeMock.mockResolvedValue({ author: new Types.ObjectId() });
+    createReviewMock.mockRejectedValue({ code: 11000 });
+
+    await expect(
+      createReview(recipeId, { userId, role: 'user' }, { rating: 4, comment: 'Very good recipe.' }),
+    ).rejects.toMatchObject({ statusCode: 409, code: 'REVIEW_ALREADY_EXISTS' });
+  });
+
+  it('lists reviews with a rounded summary and pagination', async () => {
+    aggregateMock.mockResolvedValue([
+      {
+        items: [{ id: reviewId, rating: 5 }],
+        summary: [{ averageRating: 4.6, reviewCount: 21 }],
+      },
+    ]);
+
+    await expect(listReviews(recipeId, { page: 2, limit: 10, sort: 'highest' })).resolves.toEqual({
+      items: [{ id: reviewId, rating: 5 }],
+      summary: { averageRating: 4.6, reviewCount: 21 },
+      pagination: { page: 2, limit: 10, total: 21, totalPages: 3 },
+    });
+    const pipeline = aggregateMock.mock.calls[0]?.[0] as Array<Record<string, unknown>>;
+    expect(pipeline[0]).toEqual({ $match: { recipe: new Types.ObjectId(recipeId) } });
+  });
+
+  it('does not expose reviews for private or missing recipes', async () => {
+    recipeExistsMock.mockResolvedValue(null);
+
+    await expect(
+      listReviews(recipeId, { page: 1, limit: 10, sort: 'newest' }),
+    ).rejects.toMatchObject({ statusCode: 404, code: 'RECIPE_NOT_FOUND' });
+    expect(aggregateMock).not.toHaveBeenCalled();
+  });
+
+  it('updates only a review owned by the current user', async () => {
+    const review = createReviewDocument();
+    findReviewMock.mockResolvedValue(review);
+
+    const result = await updateReview(reviewId, userId, { rating: 4 });
+
+    expect(findReviewMock).toHaveBeenCalledWith({
+      _id: new Types.ObjectId(reviewId),
+      user: new Types.ObjectId(userId),
+    });
+    expect(review.rating).toBe(4);
+    expect(review.save).toHaveBeenCalledOnce();
+    expect(result.rating).toBe(4);
+  });
+
+  it('allows owners and administrators to delete without revealing ownership', async () => {
+    deleteReviewMock.mockResolvedValue({ id: reviewId });
+
+    await deleteReview(reviewId, { userId, role: 'user' });
+    expect(deleteReviewMock).toHaveBeenLastCalledWith({
+      _id: new Types.ObjectId(reviewId),
+      user: new Types.ObjectId(userId),
+    });
+
+    await deleteReview(reviewId, { userId: '507f1f77bcf86cd799439014', role: 'admin' });
+    expect(deleteReviewMock).toHaveBeenLastCalledWith({ _id: new Types.ObjectId(reviewId) });
+
+    deleteReviewMock.mockResolvedValue(null);
+    await expect(deleteReview(reviewId, { userId, role: 'user' })).rejects.toMatchObject({
+      code: 'REVIEW_NOT_FOUND',
+    });
+  });
+});

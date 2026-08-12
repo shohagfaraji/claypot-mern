@@ -11,6 +11,7 @@ import {
   update,
 } from '../controllers/recipe.controller.js';
 import { listSaved, save, status, unsave } from '../controllers/saved-recipe.controller.js';
+import { create as createReview, list as listReviews } from '../controllers/review.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { validateBody, validateParams, validateQuery } from '../middleware/validate-request.js';
 import {
@@ -21,6 +22,7 @@ import {
   recipeIdParamsSchema,
   recipeSlugParamsSchema,
 } from '../schemas/recipe.schema.js';
+import { createReviewInputSchema, listReviewsQuerySchema } from '../schemas/review.schema.js';
 
 export const recipeRouter = Router();
 
@@ -29,8 +31,21 @@ recipeRouter.get('/mine', authenticate, validateQuery(listOwnRecipesQuerySchema)
 recipeRouter.get('/mine/:recipeId', authenticate, validateParams(recipeIdParamsSchema), mineDetail);
 recipeRouter.get('/saved', authenticate, validateQuery(listSavedRecipesQuerySchema), listSaved);
 recipeRouter.get('/:recipeId/save', authenticate, validateParams(recipeIdParamsSchema), status);
+recipeRouter.get(
+  '/:recipeId/reviews',
+  validateParams(recipeIdParamsSchema),
+  validateQuery(listReviewsQuerySchema),
+  listReviews,
+);
 recipeRouter.get('/:slug', validateParams(recipeSlugParamsSchema), detail);
 recipeRouter.post('/', authenticate, validateBody(createRecipeInputSchema), create);
+recipeRouter.post(
+  '/:recipeId/reviews',
+  authenticate,
+  validateParams(recipeIdParamsSchema),
+  validateBody(createReviewInputSchema),
+  createReview,
+);
 recipeRouter.put('/:recipeId/save', authenticate, validateParams(recipeIdParamsSchema), save);
 recipeRouter.put(
   '/:recipeId',
