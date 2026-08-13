@@ -46,21 +46,22 @@ export function ImageUploadField({
   const inputId = useId();
   const request = useAuthenticatedRequest();
   const abortControllerRef = useRef<AbortController | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    return () => {
       abortControllerRef.current?.abort();
-      if (previewUrl !== null) URL.revokeObjectURL(previewUrl);
-    },
-    [previewUrl],
-  );
+      if (objectUrlRef.current !== null) URL.revokeObjectURL(objectUrlRef.current);
+    };
+  }, []);
 
   function clearPreview() {
-    if (previewUrl !== null) URL.revokeObjectURL(previewUrl);
+    if (objectUrlRef.current !== null) URL.revokeObjectURL(objectUrlRef.current);
+    objectUrlRef.current = null;
     setPreviewUrl(null);
   }
 
@@ -75,6 +76,7 @@ export function ImageUploadField({
     abortControllerRef.current?.abort();
     clearPreview();
     const objectUrl = URL.createObjectURL(file);
+    objectUrlRef.current = objectUrl;
     setPreviewUrl(objectUrl);
     setError(null);
     setProgress(0);
@@ -93,8 +95,7 @@ export function ImageUploadField({
         );
       }
     } finally {
-      URL.revokeObjectURL(objectUrl);
-      setPreviewUrl((current) => (current === objectUrl ? null : current));
+      if (objectUrlRef.current === objectUrl) clearPreview();
       if (abortControllerRef.current === abortController) {
         abortControllerRef.current = null;
         setIsUploading(false);

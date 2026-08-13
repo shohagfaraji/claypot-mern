@@ -21,6 +21,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { updateProfile } from '@/features/auth/api/auth';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useAuthenticatedRequest } from '@/features/auth/hooks/use-authenticated-request';
+import { ImageUploadField } from '@/features/media/components/image-upload-field';
+import type { ManagedImage } from '@/features/media/types';
 import { getInitials } from '@/lib/get-initials';
 
 const dateFormatter = new Intl.DateTimeFormat('en', {
@@ -38,6 +40,10 @@ export function AccountPage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSaved, setProfileSaved] = useState(false);
+  const [avatar, setAvatar] = useState<ManagedImage | null>(() =>
+    user?.avatarUrl ? { url: user.avatarUrl, publicId: user.avatarPublicId } : null,
+  );
+  const [isAvatarUploading, setIsAvatarUploading] = useState(false);
 
   if (user === null) {
     return null;
@@ -61,8 +67,12 @@ export function AccountPage() {
   async function handleProfileSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const avatarUrl = String(formData.get('avatarUrl') ?? '').trim();
     const bio = String(formData.get('bio') ?? '').trim();
+
+    if (isAvatarUploading) {
+      setProfileError('Wait for the avatar upload to finish before saving.');
+      return;
+    }
 
     setProfileError(null);
     setProfileSaved(false);
@@ -71,7 +81,8 @@ export function AccountPage() {
     try {
       const updatedUser = await updateProfile(request, {
         name: String(formData.get('name') ?? '').trim(),
-        avatarUrl: avatarUrl || null,
+        avatarUrl: avatar?.url ?? null,
+        avatarPublicId: avatar?.publicId ?? null,
         bio: bio || null,
       });
       updateSessionUser(updatedUser);
@@ -221,21 +232,17 @@ export function AccountPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="profile-avatar">Avatar URL</Label>
-                  <Input
-                    id="profile-avatar"
-                    className="h-11"
-                    name="avatarUrl"
-                    type="url"
-                    defaultValue={user.avatarUrl ?? ''}
-                    maxLength={2048}
-                    placeholder="https://example.com/avatar.jpg"
+                <div className="max-w-72">
+                  <ImageUploadField
+                    label="Profile avatar"
+                    description="Upload a square AVIF, JPEG, PNG, or WebP image up to 8 MB."
+                    purpose="avatar"
+                    value={avatar}
+                    aspect="square"
                     disabled={isSavingProfile}
+                    onChange={setAvatar}
+                    onUploadingChange={setIsAvatarUploading}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Leave this empty to use your initials.
-                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -271,9 +278,13 @@ export function AccountPage() {
                   </div>
                 )}
 
-                <Button type="submit" disabled={isSavingProfile}>
+                <Button type="submit" disabled={isSavingProfile || isAvatarUploading}>
                   {isSavingProfile ? <LoaderCircle className="animate-spin" /> : <Save />}
-                  {isSavingProfile ? 'Saving profile…' : 'Save profile'}
+                  {isSavingProfile
+                    ? 'Saving profile…'
+                    : isAvatarUploading
+                      ? 'Uploading avatar…'
+                      : 'Save profile'}
                 </Button>
               </form>
             </div>

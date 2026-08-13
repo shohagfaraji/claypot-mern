@@ -44,6 +44,7 @@ describe('GET /api/v1/auth/me', () => {
       username: 'amina_kitchen',
       email: 'amina@example.com',
       avatarUrl: null,
+      avatarPublicId: null,
       bio: null,
       role: 'user',
       isEmailVerified: false,
@@ -64,6 +65,7 @@ describe('GET /api/v1/auth/me', () => {
           username: 'amina_kitchen',
           email: 'amina@example.com',
           avatarUrl: null,
+          avatarPublicId: null,
           bio: null,
           role: 'user',
           isEmailVerified: false,
@@ -96,6 +98,7 @@ describe('PATCH /api/v1/auth/me', () => {
       username: 'amina_kitchen',
       email: 'amina@example.com',
       avatarUrl: null,
+      avatarPublicId: null,
       bio: 'Home cook and recipe collector.',
       role: 'user',
       isEmailVerified: false,
@@ -108,6 +111,7 @@ describe('PATCH /api/v1/auth/me', () => {
       .send({
         name: '  Amina Noor  ',
         avatarUrl: null,
+        avatarPublicId: null,
         bio: '  Home cook and recipe collector.  ',
       })
       .expect(200);
@@ -115,6 +119,7 @@ describe('PATCH /api/v1/auth/me', () => {
     expect(updateCurrentUserMock).toHaveBeenCalledWith('user-id', {
       name: 'Amina Noor',
       avatarUrl: null,
+      avatarPublicId: null,
       bio: 'Home cook and recipe collector.',
     });
     expect(response.body.data.user.name).toBe('Amina Noor');

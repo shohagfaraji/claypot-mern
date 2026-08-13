@@ -119,20 +119,35 @@ describe('profile update input schema', () => {
       updateProfileInputSchema.parse({
         name: '  Amina Noor  ',
         avatarUrl: '  https://images.example.com/amina.jpg  ',
+        avatarPublicId: '  claypot/avatars/user-id/avatar-id  ',
         bio: '  Home cook and recipe collector.  ',
       }),
     ).toEqual({
       name: 'Amina Noor',
       avatarUrl: 'https://images.example.com/amina.jpg',
+      avatarPublicId: 'claypot/avatars/user-id/avatar-id',
       bio: 'Home cook and recipe collector.',
     });
   });
 
   it('allows optional profile fields to be cleared', () => {
-    expect(updateProfileInputSchema.parse({ avatarUrl: null, bio: null })).toEqual({
+    expect(
+      updateProfileInputSchema.parse({ avatarUrl: null, avatarPublicId: null, bio: null }),
+    ).toEqual({
       avatarUrl: null,
+      avatarPublicId: null,
       bio: null,
     });
+  });
+
+  it('requires an avatar URL with managed avatar metadata', () => {
+    const result = updateProfileInputSchema.safeParse({
+      avatarUrl: null,
+      avatarPublicId: 'claypot/avatars/user-id/avatar-id',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toContainEqual(expect.objectContaining({ path: ['avatarUrl'] }));
   });
 
   it('rejects empty updates, invalid URLs, and server-controlled fields', () => {

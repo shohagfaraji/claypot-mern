@@ -4,6 +4,7 @@ export interface AuthUser {
   username: string;
   email: string;
   avatarUrl: string | null;
+  avatarPublicId: string | null;
   bio: string | null;
   role: 'user' | 'admin';
   isEmailVerified: boolean;
@@ -30,5 +31,6 @@ export interface RegisterInput {
 export interface UpdateProfileInput {
   name: string;
   avatarUrl: string | null;
+  avatarPublicId: string | null;
   bio: string | null;
 }
