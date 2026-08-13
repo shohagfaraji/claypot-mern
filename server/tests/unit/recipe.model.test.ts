@@ -42,6 +42,7 @@ describe('Recipe model', () => {
     expect(recipe.tags).toEqual(['rice', 'comfort food']);
     expect(recipe.status).toBe('draft');
     expect(recipe.imageUrl).toBeNull();
+    expect(recipe.imagePublicId).toBeNull();
     expect(recipe.publishedAt).toBeNull();
   });
 

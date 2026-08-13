@@ -87,6 +87,7 @@ export interface CreateRecipeInput {
   title: string;
   summary: string;
   imageUrl?: string;
+  imagePublicId?: string;
   ingredients: Array<{
     name: string;
     quantity: string;
@@ -103,11 +104,13 @@ export interface CreateRecipeInput {
   tags: string[];
 }
 
-export interface AuthorRecipeDetail extends Omit<CreateRecipeInput, 'imageUrl' | 'instructions'> {
+export interface AuthorRecipeDetail
+  extends Omit<CreateRecipeInput, 'imageUrl' | 'imagePublicId' | 'instructions'> {
   id: string;
   author: string;
   slug: string;
   imageUrl: string | null;
+  imagePublicId: string | null;
   instructions: Array<{
     step: number;
     description: string;

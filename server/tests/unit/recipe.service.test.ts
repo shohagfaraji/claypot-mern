@@ -38,6 +38,7 @@ function createRecipeDocument(slug: string) {
     ...recipeInput,
     slug,
     imageUrl: null,
+    imagePublicId: null,
     instructions: [
       { step: 1, description: recipeInput.instructions[0]?.description },
       { step: 2, description: recipeInput.instructions[1]?.description },
@@ -65,6 +66,7 @@ describe('recipe creation service', () => {
       slug: 'spiced-claypot-rice',
       summary: recipeInput.summary,
       imageUrl: null,
+      imagePublicId: null,
       ingredients: recipeInput.ingredients,
       instructions: [
         { step: 1, description: recipeInput.instructions[0]?.description },
@@ -84,6 +86,17 @@ describe('recipe creation service', () => {
       slug: 'spiced-claypot-rice',
       status: 'draft',
     });
+  });
+
+  it('rejects a managed image outside the recipe owner folder', async () => {
+    await expect(
+      createRecipe(authorId, {
+        ...recipeInput,
+        imageUrl: 'https://res.cloudinary.com/claypot/image/upload/recipe.jpg',
+        imagePublicId: 'claypot/recipes/another-user/recipe-id',
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_IMAGE_ASSET', statusCode: 400 });
+    expect(createRecipeDocumentMock).not.toHaveBeenCalled();
   });
 
   it('adds a suffix and retries a slug collision', async () => {

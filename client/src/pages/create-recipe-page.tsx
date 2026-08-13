@@ -17,6 +17,8 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthenticatedRequest } from '@/features/auth/hooks/use-authenticated-request';
+import { ImageUploadField } from '@/features/media/components/image-upload-field';
+import type { ManagedImage } from '@/features/media/types';
 import { createRecipe } from '@/features/recipes/api/create-recipe';
 import { updateRecipe } from '@/features/recipes/api/update-recipe';
 import { useAuthorRecipe } from '@/features/recipes/hooks/use-author-recipe';
@@ -68,6 +70,10 @@ function RecipeForm({ recipe }: RecipeFormProps) {
       : [createInstruction()],
   );
   const [difficulty, setDifficulty] = useState<RecipeDifficulty>(recipe?.difficulty ?? 'easy');
+  const [coverImage, setCoverImage] = useState<ManagedImage | null>(() =>
+    recipe?.imageUrl ? { url: recipe.imageUrl, publicId: recipe.imagePublicId } : null,
+  );
+  const [isImageUploading, setIsImageUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isEditing = recipe !== null;
@@ -91,7 +97,6 @@ function RecipeForm({ recipe }: RecipeFormProps) {
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const imageUrl = String(formData.get('imageUrl') ?? '').trim();
     const tags = [
       ...new Set(
         String(formData.get('tags') ?? '')
@@ -106,6 +111,11 @@ function RecipeForm({ recipe }: RecipeFormProps) {
       return;
     }
 
+    if (isImageUploading) {
+      setError('Wait for the cover image upload to finish before saving.');
+      return;
+    }
+
     setError(null);
     setIsSubmitting(true);
 
@@ -113,7 +123,8 @@ function RecipeForm({ recipe }: RecipeFormProps) {
       const input: CreateRecipeInput = {
         title: String(formData.get('title') ?? '').trim(),
         summary: String(formData.get('summary') ?? '').trim(),
-        ...(imageUrl ? { imageUrl } : {}),
+        ...(coverImage ? { imageUrl: coverImage.url } : {}),
+        ...(coverImage?.publicId ? { imagePublicId: coverImage.publicId } : {}),
         ingredients: ingredients.map(({ name, quantity }) => ({
           name: name.trim(),
           quantity: quantity.trim(),
@@ -216,22 +227,15 @@ function RecipeForm({ recipe }: RecipeFormProps) {
                 />
                 <p className="text-xs text-muted-foreground">Up to 300 characters.</p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="imageUrl">Image URL</Label>
-                <Input
-                  id="imageUrl"
-                  className="h-11"
-                  name="imageUrl"
-                  type="url"
-                  defaultValue={recipe?.imageUrl ?? ''}
-                  maxLength={2048}
-                  placeholder="https://example.com/recipe.jpg"
-                  disabled={isSubmitting}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Optional. A Claypot-branded placeholder is used when no image is provided.
-                </p>
-              </div>
+              <ImageUploadField
+                label="Recipe cover"
+                description="Upload an AVIF, JPEG, PNG, or WebP image up to 8 MB. Landscape images work best."
+                purpose="recipe-cover"
+                value={coverImage}
+                disabled={isSubmitting}
+                onChange={setCoverImage}
+                onUploadingChange={setIsImageUploading}
+              />
             </CardContent>
           </Card>
 
@@ -518,9 +522,19 @@ function RecipeForm({ recipe }: RecipeFormProps) {
                 </div>
               )}
 
-              <Button className="mt-6 h-11 w-full" type="submit" disabled={isSubmitting}>
+              <Button
+                className="mt-6 h-11 w-full"
+                type="submit"
+                disabled={isSubmitting || isImageUploading}
+              >
                 {isSubmitting ? <LoaderCircle className="animate-spin" /> : <Save />}
-                {isSubmitting ? 'Saving recipe…' : isEditing ? 'Save changes' : 'Save recipe'}
+                {isSubmitting
+                  ? 'Saving recipe…'
+                  : isImageUploading
+                    ? 'Uploading cover…'
+                    : isEditing
+                      ? 'Save changes'
+                      : 'Save recipe'}
               </Button>
               <Link
                 className={cn(buttonVariants({ variant: 'ghost' }), 'mt-2 w-full')}

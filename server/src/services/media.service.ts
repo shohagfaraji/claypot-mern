@@ -13,7 +13,7 @@ export interface ImageUploadSignature {
   apiKey: string;
   signature: string;
   timestamp: number;
-  folder: string;
+  assetFolder: string;
   publicId: string;
   allowedFormats: string;
   transformation: string;
@@ -49,12 +49,12 @@ export function createImageUploadSignature(
   const credentials = getCloudinaryCredentials();
   const timestamp = Math.floor(now.getTime() / 1000);
   const folderName = purpose === 'avatar' ? 'avatars' : 'recipes';
-  const folder = `claypot/${folderName}/${userId}`;
-  const publicId = randomUUID();
+  const assetFolder = `claypot/${folderName}/${userId}`;
+  const publicId = `${assetFolder}/${randomUUID()}`;
   const transformation = `c_limit,w_${maximumDimension},h_${maximumDimension}`;
   const parameters = {
     allowed_formats: allowedFormats,
-    folder,
+    asset_folder: assetFolder,
     public_id: publicId,
     timestamp,
     transformation,
@@ -67,7 +67,7 @@ export function createImageUploadSignature(
     apiKey: credentials.apiKey,
     signature,
     timestamp,
-    folder,
+    assetFolder,
     publicId,
     allowedFormats,
     transformation,

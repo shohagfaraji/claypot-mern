@@ -49,8 +49,8 @@ describe('media service', () => {
     expect(apiSignRequestMock).toHaveBeenCalledWith(
       {
         allowed_formats: 'avif,jpeg,jpg,png,webp',
-        folder,
-        public_id: '019c2f98-77ba-7000-8000-000000000001',
+        asset_folder: folder,
+        public_id: `${folder}/019c2f98-77ba-7000-8000-000000000001`,
         timestamp: 1_786_579_200,
         transformation: 'c_limit,w_2400,h_2400',
       },
@@ -62,8 +62,8 @@ describe('media service', () => {
       apiKey: 'public-api-key',
       signature: 'signed-parameters',
       timestamp: 1_786_579_200,
-      folder,
-      publicId: '019c2f98-77ba-7000-8000-000000000001',
+      assetFolder: folder,
+      publicId: `${folder}/019c2f98-77ba-7000-8000-000000000001`,
       allowedFormats: 'avif,jpeg,jpg,png,webp',
       transformation: 'c_limit,w_2400,h_2400',
     });

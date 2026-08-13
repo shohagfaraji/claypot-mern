@@ -120,4 +120,15 @@ describe('create recipe input schema', () => {
       ]),
     );
   });
+
+  it('requires a delivery URL with a managed image public ID', () => {
+    const result = createRecipeInputSchema.safeParse({
+      ...validRecipeInput,
+      imageUrl: null,
+      imagePublicId: 'claypot/recipes/user-id/recipe-id',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toContainEqual(expect.objectContaining({ path: ['imageUrl'] }));
+  });
 });

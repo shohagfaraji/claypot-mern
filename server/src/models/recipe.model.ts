@@ -19,6 +19,7 @@ export interface Recipe {
   slug: string;
   summary: string;
   imageUrl: string | null;
+  imagePublicId: string | null;
   ingredients: RecipeIngredient[];
   instructions: RecipeInstruction[];
   prepTimeMinutes: number;
@@ -105,6 +106,12 @@ const recipeSchema = new Schema<Recipe>(
       type: String,
       trim: true,
       maxlength: 2_048,
+      default: null,
+    },
+    imagePublicId: {
+      type: String,
+      trim: true,
+      maxlength: 500,
       default: null,
     },
     ingredients: {

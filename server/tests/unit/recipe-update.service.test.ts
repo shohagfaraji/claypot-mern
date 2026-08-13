@@ -20,6 +20,7 @@ const updateInput = {
   title: 'Updated Claypot Rice',
   summary: 'An updated comforting rice dish with warming spices.',
   imageUrl: 'https://images.example.com/updated-rice.jpg',
+  imagePublicId: `claypot/recipes/${authorId}/updated-rice`,
   ingredients: [
     { name: 'Basmati rice', quantity: '2 cups' },
     { name: 'Whole spices', quantity: '1 tbsp' },
@@ -45,6 +46,7 @@ function createRecipeDocument() {
     slug: 'spiced-claypot-rice',
     summary: 'A comforting rice dish cooked with warming spices.',
     imageUrl: null,
+    imagePublicId: null,
     ingredients: [{ name: 'Basmati rice', quantity: '2 cups' }],
     instructions: [{ step: 1, description: 'Rinse the rice thoroughly.' }],
     prepTimeMinutes: 15,
@@ -96,6 +98,7 @@ describe('author recipe editing', () => {
       slug: 'spiced-claypot-rice',
       summary: updateInput.summary,
       imageUrl: updateInput.imageUrl,
+      imagePublicId: updateInput.imagePublicId,
       ingredients: updateInput.ingredients,
       instructions: [
         { step: 1, description: updateInput.instructions[0]?.description },
