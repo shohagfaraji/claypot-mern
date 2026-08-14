@@ -1,4 +1,4 @@
-import { Bookmark, BookOpen, Menu, Search, UserRound, X } from 'lucide-react';
+import { Bookmark, BookOpen, LayoutDashboard, Menu, Search, UserRound, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -42,6 +42,12 @@ export function SiteHeader() {
         <div className="hidden items-center gap-2 sm:flex">
           {status === 'authenticated' && user ? (
             <>
+              {user.role === 'admin' && (
+                <Link className={buttonVariants({ variant: 'ghost', size: 'lg' })} to="/admin">
+                  <LayoutDashboard />
+                  Admin
+                </Link>
+              )}
               <Link
                 className={buttonVariants({ variant: 'ghost', size: 'lg' })}
                 to="/saved-recipes"
@@ -101,6 +107,16 @@ export function SiteHeader() {
             <div className="mt-4 border-t pt-5">
               {status === 'authenticated' && user ? (
                 <div className="mb-3 grid gap-2">
+                  {user.role === 'admin' && (
+                    <Link
+                      className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}
+                      to="/admin"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <LayoutDashboard />
+                      Admin dashboard
+                    </Link>
+                  )}
                   <Link
                     className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}
                     to="/saved-recipes"

@@ -3,7 +3,12 @@ import { lazy, Suspense } from 'react';
 import { Route, Routes } from 'react-router-dom';
 
 import { ProtectedRoute } from '@/features/auth/components/protected-route';
+import { AdminLayout } from '@/features/admin/components/admin-layout';
+import { AdminRoute } from '@/features/admin/components/admin-route';
 
+const AdminDashboardPage = lazy(async () => ({
+  default: (await import('@/pages/admin-dashboard-page')).AdminDashboardPage,
+}));
 const AccountPage = lazy(async () => ({
   default: (await import('@/pages/account-page')).AccountPage,
 }));
@@ -57,6 +62,11 @@ function App() {
         <Route path="recipes/:slug" element={<RecipeDetailPage />} />
         <Route path="cooks/:username" element={<UserProfilePage />} />
         <Route element={<ProtectedRoute />}>
+          <Route element={<AdminRoute />}>
+            <Route element={<AdminLayout />}>
+              <Route path="admin" element={<AdminDashboardPage />} />
+            </Route>
+          </Route>
           <Route path="account" element={<AccountPage />} />
           <Route path="my-recipes" element={<MyRecipesPage />} />
           <Route path="saved-recipes" element={<SavedRecipesPage />} />
