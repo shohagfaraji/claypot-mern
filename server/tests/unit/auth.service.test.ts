@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   createUserMock,
+  deleteManagedImageAfterPersistenceMock,
   findUserByIdMock,
   findUserMock,
   hashPasswordMock,
@@ -10,12 +11,17 @@ const {
   verifyPasswordMock,
 } = vi.hoisted(() => ({
   createUserMock: vi.fn(),
+  deleteManagedImageAfterPersistenceMock: vi.fn(),
   findUserByIdMock: vi.fn(),
   findUserMock: vi.fn(),
   hashPasswordMock: vi.fn(),
   selectCurrentUserMock: vi.fn(),
   selectPasswordMock: vi.fn(),
   verifyPasswordMock: vi.fn(),
+}));
+
+vi.mock('../../src/services/media.service.js', () => ({
+  deleteManagedImageAfterPersistence: deleteManagedImageAfterPersistenceMock,
 }));
 
 vi.mock('../../src/models/user.model.js', () => ({
@@ -63,6 +69,7 @@ describe('authentication service', () => {
       username: registrationInput.username,
       email: registrationInput.email,
       avatarUrl: null,
+      avatarPublicId: null,
       bio: null,
       role: 'user',
       isEmailVerified: false,
@@ -84,6 +91,7 @@ describe('authentication service', () => {
       username: registrationInput.username,
       email: registrationInput.email,
       avatarUrl: null,
+      avatarPublicId: null,
       bio: null,
       role: 'user',
       isEmailVerified: false,
@@ -160,6 +168,7 @@ describe('login authentication', () => {
       username: 'amina_kitchen',
       email: 'amina@example.com',
       avatarUrl: null,
+      avatarPublicId: null,
       bio: null,
       role: 'user',
       isEmailVerified: false,
@@ -226,6 +235,7 @@ describe('current user lookup', () => {
       username: 'amina_kitchen',
       email: 'amina@example.com',
       avatarUrl: null,
+      avatarPublicId: null,
       bio: null,
       role: 'user',
       isEmailVerified: false,
@@ -238,6 +248,7 @@ describe('current user lookup', () => {
       username: 'amina_kitchen',
       email: 'amina@example.com',
       avatarUrl: null,
+      avatarPublicId: null,
       bio: null,
       role: 'user',
       isEmailVerified: false,
@@ -245,7 +256,7 @@ describe('current user lookup', () => {
     });
     expect(findUserByIdMock).toHaveBeenCalledWith('user-id');
     expect(selectCurrentUserMock).toHaveBeenCalledWith(
-      'name username email avatarUrl bio role isEmailVerified createdAt',
+      'name username email avatarUrl avatarPublicId bio role isEmailVerified createdAt',
     );
   });
 
@@ -283,6 +294,7 @@ describe('current user profile update', () => {
     const result = await updateCurrentUser('user-id', {
       name: 'Amina Noor',
       avatarUrl: 'https://images.example.com/amina.jpg',
+      avatarPublicId: 'claypot/avatars/user-id/avatar-id',
       bio: 'Home cook and recipe collector.',
     });
 
@@ -294,6 +306,7 @@ describe('current user profile update', () => {
       username: 'amina_kitchen',
       email: 'amina@example.com',
       avatarUrl: 'https://images.example.com/amina.jpg',
+      avatarPublicId: 'claypot/avatars/user-id/avatar-id',
       bio: 'Home cook and recipe collector.',
       role: 'user',
       isEmailVerified: false,
@@ -308,6 +321,7 @@ describe('current user profile update', () => {
       username: 'amina_kitchen',
       email: 'amina@example.com',
       avatarUrl: 'https://images.example.com/amina.jpg',
+      avatarPublicId: 'claypot/avatars/user-id/avatar-id',
       bio: 'Home cook.',
       role: 'user' as const,
       isEmailVerified: false,
@@ -316,12 +330,37 @@ describe('current user profile update', () => {
     };
     findUserByIdMock.mockResolvedValue(user);
 
-    await updateCurrentUser('user-id', { avatarUrl: null, bio: null });
+    await updateCurrentUser('user-id', { avatarUrl: null, avatarPublicId: null, bio: null });
 
     expect(user.avatarUrl).toBeNull();
+    expect(user.avatarPublicId).toBeNull();
     expect(user.bio).toBeNull();
     expect(user.username).toBe('amina_kitchen');
     expect(user.email).toBe('amina@example.com');
+    expect(deleteManagedImageAfterPersistenceMock).toHaveBeenCalledWith(
+      'claypot/avatars/user-id/avatar-id',
+    );
+    expect(user.save.mock.invocationCallOrder[0]).toBeLessThan(
+      deleteManagedImageAfterPersistenceMock.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it('rejects managed avatars outside the current user folder', async () => {
+    const user = {
+      id: 'user-id',
+      avatarUrl: null,
+      avatarPublicId: null,
+      save: vi.fn(),
+    };
+    findUserByIdMock.mockResolvedValue(user);
+
+    await expect(
+      updateCurrentUser('user-id', {
+        avatarUrl: 'https://res.cloudinary.com/claypot/image/upload/avatar.jpg',
+        avatarPublicId: 'claypot/avatars/another-user/avatar-id',
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_AVATAR_ASSET', statusCode: 400 });
+    expect(user.save).not.toHaveBeenCalled();
   });
 
   it('rejects an identity whose user no longer exists', async () => {

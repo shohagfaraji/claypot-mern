@@ -2,6 +2,7 @@ import { AppError } from '../errors/app-error.js';
 import { hashPassword, verifyPassword } from '../lib/password.js';
 import { UserModel } from '../models/user.model.js';
 import type { LoginInput, RegisterInput, UpdateProfileInput } from '../schemas/auth.schema.js';
+import { deleteManagedImageAfterPersistence } from './media.service.js';
 
 const fallbackPasswordHash = '$2b$12$EwbyiAokvt5b.KYCGIXK.ujjVDkteVub4lXR.6lG6VJFVJIUCRKPS';
 
@@ -11,6 +12,7 @@ export interface PublicUser {
   username: string;
   email: string;
   avatarUrl: string | null;
+  avatarPublicId: string | null;
   bio: string | null;
   role: 'user' | 'admin';
   isEmailVerified: boolean;
@@ -24,6 +26,7 @@ function toPublicUser(user: PublicUser): PublicUser {
     username: user.username,
     email: user.email,
     avatarUrl: user.avatarUrl,
+    avatarPublicId: user.avatarPublicId ?? null,
     bio: user.bio,
     role: user.role,
     isEmailVerified: user.isEmailVerified,
@@ -82,7 +85,7 @@ export async function authenticateUser(input: LoginInput): Promise<PublicUser> {
 
 export async function getCurrentUser(userId: string): Promise<PublicUser> {
   const user = await UserModel.findById(userId).select(
-    'name username email avatarUrl bio role isEmailVerified createdAt',
+    'name username email avatarUrl avatarPublicId bio role isEmailVerified createdAt',
   );
 
   if (user === null) {
@@ -102,10 +105,29 @@ export async function updateCurrentUser(
     throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
   }
 
+  if (
+    input.avatarPublicId !== null &&
+    input.avatarPublicId !== undefined &&
+    !input.avatarPublicId.startsWith(`claypot/avatars/${userId}/`)
+  ) {
+    throw new AppError(400, 'INVALID_AVATAR_ASSET', 'The profile avatar is invalid.');
+  }
+
+  const previousAvatarPublicId = user.avatarPublicId;
+
   if (input.name !== undefined) user.name = input.name;
   if (input.avatarUrl !== undefined) user.avatarUrl = input.avatarUrl;
+  if (input.avatarPublicId !== undefined) user.avatarPublicId = input.avatarPublicId;
   if (input.bio !== undefined) user.bio = input.bio;
   await user.save();
+
+  if (
+    previousAvatarPublicId &&
+    previousAvatarPublicId !== input.avatarPublicId &&
+    input.avatarPublicId !== undefined
+  ) {
+    await deleteManagedImageAfterPersistence(previousAvatarPublicId);
+  }
 
   return toPublicUser(user);
 }

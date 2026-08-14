@@ -9,6 +9,7 @@ import type {
   ListOwnRecipesQuery,
   ListRecipesQuery,
 } from '../schemas/recipe.schema.js';
+import { deleteManagedImageAfterPersistence } from './media.service.js';
 
 const maximumCreateAttempts = 3;
 
@@ -99,6 +100,16 @@ function isDuplicateKeyError(error: unknown): error is { code: 11000 } {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === 11000;
 }
 
+function validateManagedRecipeImage(imagePublicId: string | null | undefined, ownerIds: string[]) {
+  if (
+    imagePublicId !== null &&
+    imagePublicId !== undefined &&
+    !ownerIds.some((ownerId) => imagePublicId.startsWith(`claypot/recipes/${ownerId}/`))
+  ) {
+    throw new AppError(400, 'INVALID_IMAGE_ASSET', 'The recipe image is invalid.');
+  }
+}
+
 function toPublicRecipe(recipe: Recipe & { id: string }): PublicRecipe {
   return {
     id: recipe.id,
@@ -107,6 +118,7 @@ function toPublicRecipe(recipe: Recipe & { id: string }): PublicRecipe {
     slug: recipe.slug,
     summary: recipe.summary,
     imageUrl: recipe.imageUrl,
+    imagePublicId: recipe.imagePublicId,
     ingredients: recipe.ingredients,
     instructions: recipe.instructions,
     prepTimeMinutes: recipe.prepTimeMinutes,
@@ -128,6 +140,7 @@ export async function createRecipe(
   input: CreateRecipeInput,
 ): Promise<PublicRecipe> {
   const author = new Types.ObjectId(authorId);
+  validateManagedRecipeImage(input.imagePublicId, [authorId]);
   const slugBase = createSlugBase(input.title);
   let slug = slugBase;
 
@@ -139,6 +152,7 @@ export async function createRecipe(
         slug,
         summary: input.summary,
         imageUrl: input.imageUrl ?? null,
+        imagePublicId: input.imagePublicId ?? null,
         ingredients: input.ingredients,
         instructions: input.instructions.map((instruction, index) => ({
           step: index + 1,
@@ -448,9 +462,13 @@ export async function updateRecipe(
     throw new AppError(404, 'RECIPE_NOT_FOUND', 'Recipe was not found.');
   }
 
+  validateManagedRecipeImage(input.imagePublicId, [recipe.author.toString(), actor.userId]);
+  const previousImagePublicId = recipe.imagePublicId;
+
   recipe.title = input.title;
   recipe.summary = input.summary;
   recipe.imageUrl = input.imageUrl ?? null;
+  recipe.imagePublicId = input.imagePublicId ?? null;
   recipe.ingredients = input.ingredients;
   recipe.instructions = input.instructions.map((instruction, index) => ({
     step: index + 1,
@@ -465,6 +483,10 @@ export async function updateRecipe(
   recipe.tags = input.tags;
   await recipe.save();
 
+  if (previousImagePublicId && previousImagePublicId !== recipe.imagePublicId) {
+    await deleteManagedImageAfterPersistence(previousImagePublicId);
+  }
+
   return toPublicRecipe(recipe);
 }
 
@@ -473,6 +495,10 @@ export async function deleteRecipe(recipeId: string, actor: AccessTokenIdentity)
 
   if (recipe === null) {
     throw new AppError(404, 'RECIPE_NOT_FOUND', 'Recipe was not found.');
+  }
+
+  if (recipe.imagePublicId) {
+    await deleteManagedImageAfterPersistence(recipe.imagePublicId);
   }
 }
 

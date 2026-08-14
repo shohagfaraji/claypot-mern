@@ -78,7 +78,24 @@ export const updateProfileInputSchema = z
       .pipe(z.url('Enter a valid avatar URL.'))
       .nullable()
       .optional(),
+    avatarPublicId: z
+      .string()
+      .trim()
+      .min(1, 'Avatar public ID cannot be empty.')
+      .max(500, 'Avatar public ID is too long.')
+      .regex(/^[a-zA-Z0-9/_-]+$/, 'Avatar public ID is invalid.')
+      .nullable()
+      .optional(),
     bio: z.string().trim().max(300, 'Bio cannot exceed 300 characters.').nullable().optional(),
+  })
+  .superRefine((input, context) => {
+    if (input.avatarPublicId && !input.avatarUrl) {
+      context.addIssue({
+        code: 'custom',
+        path: ['avatarUrl'],
+        message: 'An avatar URL is required for a managed avatar.',
+      });
+    }
   })
   .refine((input) => Object.keys(input).length > 0, {
     message: 'Add at least one profile field to update.',

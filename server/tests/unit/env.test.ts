@@ -40,4 +40,22 @@ describe('environment configuration', () => {
       'A unique access token secret is required in production',
     );
   });
+
+  it('requires all Cloudinary credentials when media storage is configured', () => {
+    expect(() => loadEnv({ CLOUDINARY_CLOUD_NAME: 'claypot' })).toThrow(
+      'Cloudinary cloud name, API key, and API secret must be configured together',
+    );
+
+    expect(
+      loadEnv({
+        CLOUDINARY_CLOUD_NAME: 'claypot',
+        CLOUDINARY_API_KEY: 'api-key',
+        CLOUDINARY_API_SECRET: 'api-secret',
+      }),
+    ).toMatchObject({
+      CLOUDINARY_CLOUD_NAME: 'claypot',
+      CLOUDINARY_API_KEY: 'api-key',
+      CLOUDINARY_API_SECRET: 'api-secret',
+    });
+  });
 });

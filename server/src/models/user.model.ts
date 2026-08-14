@@ -8,6 +8,7 @@ export interface User {
   email: string;
   passwordHash: string;
   avatarUrl: string | null;
+  avatarPublicId: string | null;
   bio: string | null;
   role: (typeof userRoles)[number];
   isEmailVerified: boolean;
@@ -56,6 +57,12 @@ const userSchema = new Schema<User>(
       maxlength: 2_048,
       default: null,
     },
+    avatarPublicId: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+      default: null,
+    },
     bio: {
       type: String,
       trim: true,
@@ -83,6 +90,7 @@ const userSchema = new Schema<User>(
       transform: (_document, returnedObject) => {
         const publicUser = returnedObject as Partial<typeof returnedObject>;
         delete publicUser.passwordHash;
+        delete publicUser.avatarPublicId;
 
         return publicUser;
       },

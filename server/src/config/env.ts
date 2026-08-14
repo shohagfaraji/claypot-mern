@@ -27,6 +27,9 @@ const envSchema = z
     ACCESS_TOKEN_SECRET: z.string().min(32).default(developmentAccessTokenSecret),
     ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().max(60).default(15),
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().max(30).default(7),
+    CLOUDINARY_CLOUD_NAME: z.string().trim().min(1).optional(),
+    CLOUDINARY_API_KEY: z.string().trim().min(1).optional(),
+    CLOUDINARY_API_SECRET: z.string().trim().min(1).optional(),
   })
   .superRefine((environment, context) => {
     if (
@@ -37,6 +40,21 @@ const envSchema = z
         code: 'custom',
         path: ['ACCESS_TOKEN_SECRET'],
         message: 'A unique access token secret is required in production',
+      });
+    }
+
+    const cloudinaryValues = [
+      environment.CLOUDINARY_CLOUD_NAME,
+      environment.CLOUDINARY_API_KEY,
+      environment.CLOUDINARY_API_SECRET,
+    ];
+    const configuredValues = cloudinaryValues.filter((value) => value !== undefined);
+
+    if (configuredValues.length > 0 && configuredValues.length < cloudinaryValues.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['CLOUDINARY_CLOUD_NAME'],
+        message: 'Cloudinary cloud name, API key, and API secret must be configured together',
       });
     }
   });

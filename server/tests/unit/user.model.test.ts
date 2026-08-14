@@ -21,15 +21,18 @@ describe('User model', () => {
     expect(user.role).toBe('user');
     expect(user.isEmailVerified).toBe(false);
     expect(user.avatarUrl).toBeNull();
+    expect(user.avatarPublicId).toBeNull();
     expect(user.bio).toBeNull();
     expect(user.lastLoginAt).toBeNull();
   });
 
-  it('does not include the password hash in JSON output', () => {
+  it('does not include private fields in JSON output', () => {
     const user = createValidUser();
+    user.avatarPublicId = 'claypot/avatars/user-id/avatar-id';
     const output = user.toJSON();
 
     expect(output).not.toHaveProperty('passwordHash');
+    expect(output).not.toHaveProperty('avatarPublicId');
   });
 
   it('requires identity and authentication fields', async () => {
