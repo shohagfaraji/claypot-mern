@@ -1,8 +1,13 @@
 import { Types } from 'mongoose';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { findRecipeMock } = vi.hoisted(() => ({
+const { deleteManagedImageAfterPersistenceMock, findRecipeMock } = vi.hoisted(() => ({
+  deleteManagedImageAfterPersistenceMock: vi.fn(),
   findRecipeMock: vi.fn(),
+}));
+
+vi.mock('../../src/services/media.service.js', () => ({
+  deleteManagedImageAfterPersistence: deleteManagedImageAfterPersistenceMock,
 }));
 
 vi.mock('../../src/models/recipe.model.js', () => ({
@@ -38,7 +43,7 @@ const updateInput = {
   tags: ['rice', 'comfort food'],
 };
 
-function createRecipeDocument() {
+function createRecipeDocument(imagePublicId: string | null = null) {
   return {
     id: recipeId,
     author: new Types.ObjectId(authorId),
@@ -46,7 +51,7 @@ function createRecipeDocument() {
     slug: 'spiced-claypot-rice',
     summary: 'A comforting rice dish cooked with warming spices.',
     imageUrl: null,
-    imagePublicId: null,
+    imagePublicId,
     ingredients: [{ name: 'Basmati rice', quantity: '2 cups' }],
     instructions: [{ step: 1, description: 'Rinse the rice thoroughly.' }],
     prepTimeMinutes: 15,
@@ -111,6 +116,20 @@ describe('author recipe editing', () => {
     });
     expect(recipe.save).toHaveBeenCalledOnce();
     expect(result).toMatchObject({ id: recipeId, title: updateInput.title });
+  });
+
+  it('removes the previous cover after saving its replacement', async () => {
+    const recipe = createRecipeDocument(`claypot/recipes/${authorId}/previous-cover`);
+    findRecipeMock.mockResolvedValue(recipe);
+
+    await updateRecipe(recipeId, { userId: authorId, role: 'user' }, updateInput);
+
+    expect(deleteManagedImageAfterPersistenceMock).toHaveBeenCalledWith(
+      `claypot/recipes/${authorId}/previous-cover`,
+    );
+    expect(recipe.save.mock.invocationCallOrder[0]).toBeLessThan(
+      deleteManagedImageAfterPersistenceMock.mock.invocationCallOrder[0] ?? 0,
+    );
   });
 
   it('allows an administrator to edit without an ownership filter', async () => {

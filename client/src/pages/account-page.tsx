@@ -22,7 +22,7 @@ import { updateProfile } from '@/features/auth/api/auth';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useAuthenticatedRequest } from '@/features/auth/hooks/use-authenticated-request';
 import { ImageUploadField } from '@/features/media/components/image-upload-field';
-import type { ManagedImage } from '@/features/media/types';
+import { useManagedImage } from '@/features/media/hooks/use-managed-image';
 import { getInitials } from '@/lib/get-initials';
 
 const dateFormatter = new Intl.DateTimeFormat('en', {
@@ -40,8 +40,9 @@ export function AccountPage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSaved, setProfileSaved] = useState(false);
-  const [avatar, setAvatar] = useState<ManagedImage | null>(() =>
+  const avatar = useManagedImage(
     user?.avatarUrl ? { url: user.avatarUrl, publicId: user.avatarPublicId } : null,
+    'avatar',
   );
   const [isAvatarUploading, setIsAvatarUploading] = useState(false);
 
@@ -81,10 +82,15 @@ export function AccountPage() {
     try {
       const updatedUser = await updateProfile(request, {
         name: String(formData.get('name') ?? '').trim(),
-        avatarUrl: avatar?.url ?? null,
-        avatarPublicId: avatar?.publicId ?? null,
+        avatarUrl: avatar.image?.url ?? null,
+        avatarPublicId: avatar.image?.publicId ?? null,
         bio: bio || null,
       });
+      avatar.commit(
+        updatedUser.avatarUrl
+          ? { url: updatedUser.avatarUrl, publicId: updatedUser.avatarPublicId }
+          : null,
+      );
       updateSessionUser(updatedUser);
       setProfileSaved(true);
       setIsSavingProfile(false);
@@ -237,10 +243,10 @@ export function AccountPage() {
                     label="Profile avatar"
                     description="Upload a square AVIF, JPEG, PNG, or WebP image up to 8 MB."
                     purpose="avatar"
-                    value={avatar}
+                    value={avatar.image}
                     aspect="square"
                     disabled={isSavingProfile}
-                    onChange={setAvatar}
+                    onChange={avatar.setImage}
                     onUploadingChange={setIsAvatarUploading}
                   />
                 </div>

@@ -29,6 +29,18 @@ export async function getImageUploadSignature(
   return response.data.upload;
 }
 
+export async function discardImage(
+  request: AuthenticatedRequest,
+  purpose: ImagePurpose,
+  publicId: string,
+) {
+  await request<void>('/media/images', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ purpose, publicId }),
+  });
+}
+
 export function uploadImageToCloudinary(
   file: File,
   upload: ImageUploadSignature,

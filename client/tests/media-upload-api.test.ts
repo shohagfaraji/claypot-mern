@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  discardImage,
   getImageUploadSignature,
   uploadImageToCloudinary,
 } from '@/features/media/api/upload-image';
@@ -67,6 +68,18 @@ describe('media upload API', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ purpose: 'recipe-cover' }),
+    });
+  });
+
+  it('requests removal of an unused managed image', async () => {
+    const request = vi.fn().mockResolvedValue(undefined);
+
+    await discardImage(request, 'recipe-cover', upload.publicId);
+
+    expect(request).toHaveBeenCalledWith('/media/images', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ purpose: 'recipe-cover', publicId: upload.publicId }),
     });
   });
 

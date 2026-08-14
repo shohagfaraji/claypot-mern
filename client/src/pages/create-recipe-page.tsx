@@ -18,7 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthenticatedRequest } from '@/features/auth/hooks/use-authenticated-request';
 import { ImageUploadField } from '@/features/media/components/image-upload-field';
-import type { ManagedImage } from '@/features/media/types';
+import { useManagedImage } from '@/features/media/hooks/use-managed-image';
 import { createRecipe } from '@/features/recipes/api/create-recipe';
 import { updateRecipe } from '@/features/recipes/api/update-recipe';
 import { useAuthorRecipe } from '@/features/recipes/hooks/use-author-recipe';
@@ -70,8 +70,9 @@ function RecipeForm({ recipe }: RecipeFormProps) {
       : [createInstruction()],
   );
   const [difficulty, setDifficulty] = useState<RecipeDifficulty>(recipe?.difficulty ?? 'easy');
-  const [coverImage, setCoverImage] = useState<ManagedImage | null>(() =>
+  const coverImage = useManagedImage(
     recipe?.imageUrl ? { url: recipe.imageUrl, publicId: recipe.imagePublicId } : null,
+    'recipe-cover',
   );
   const [isImageUploading, setIsImageUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -123,8 +124,8 @@ function RecipeForm({ recipe }: RecipeFormProps) {
       const input: CreateRecipeInput = {
         title: String(formData.get('title') ?? '').trim(),
         summary: String(formData.get('summary') ?? '').trim(),
-        ...(coverImage ? { imageUrl: coverImage.url } : {}),
-        ...(coverImage?.publicId ? { imagePublicId: coverImage.publicId } : {}),
+        ...(coverImage.image ? { imageUrl: coverImage.image.url } : {}),
+        ...(coverImage.image?.publicId ? { imagePublicId: coverImage.image.publicId } : {}),
         ingredients: ingredients.map(({ name, quantity }) => ({
           name: name.trim(),
           quantity: quantity.trim(),
@@ -143,6 +144,8 @@ function RecipeForm({ recipe }: RecipeFormProps) {
 
       if (recipe) await updateRecipe(request, recipe.id, input);
       else await createRecipe(request, input);
+
+      coverImage.commit(coverImage.image);
 
       navigate('/my-recipes', {
         replace: true,
@@ -231,9 +234,9 @@ function RecipeForm({ recipe }: RecipeFormProps) {
                 label="Recipe cover"
                 description="Upload an AVIF, JPEG, PNG, or WebP image up to 8 MB. Landscape images work best."
                 purpose="recipe-cover"
-                value={coverImage}
+                value={coverImage.image}
                 disabled={isSubmitting}
-                onChange={setCoverImage}
+                onChange={coverImage.setImage}
                 onUploadingChange={setIsImageUploading}
               />
             </CardContent>

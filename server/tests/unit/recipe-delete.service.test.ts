@@ -1,8 +1,13 @@
 import { Types } from 'mongoose';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { deleteRecipeMock } = vi.hoisted(() => ({
+const { deleteManagedImageAfterPersistenceMock, deleteRecipeMock } = vi.hoisted(() => ({
+  deleteManagedImageAfterPersistenceMock: vi.fn(),
   deleteRecipeMock: vi.fn(),
+}));
+
+vi.mock('../../src/services/media.service.js', () => ({
+  deleteManagedImageAfterPersistence: deleteManagedImageAfterPersistenceMock,
 }));
 
 vi.mock('../../src/models/recipe.model.js', () => ({
@@ -44,6 +49,19 @@ describe('recipe deletion', () => {
     expect(deleteRecipeMock).toHaveBeenCalledWith({
       _id: new Types.ObjectId(recipeId),
     });
+  });
+
+  it('removes the cover of a deleted recipe', async () => {
+    deleteRecipeMock.mockResolvedValue({
+      id: recipeId,
+      imagePublicId: `claypot/recipes/${authorId}/cover-id`,
+    });
+
+    await deleteRecipe(recipeId, { userId: authorId, role: 'user' });
+
+    expect(deleteManagedImageAfterPersistenceMock).toHaveBeenCalledWith(
+      `claypot/recipes/${authorId}/cover-id`,
+    );
   });
 
   it('does not reveal recipes outside the current user ownership', async () => {

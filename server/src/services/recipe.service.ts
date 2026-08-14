@@ -9,6 +9,7 @@ import type {
   ListOwnRecipesQuery,
   ListRecipesQuery,
 } from '../schemas/recipe.schema.js';
+import { deleteManagedImageAfterPersistence } from './media.service.js';
 
 const maximumCreateAttempts = 3;
 
@@ -462,6 +463,7 @@ export async function updateRecipe(
   }
 
   validateManagedRecipeImage(input.imagePublicId, [recipe.author.toString(), actor.userId]);
+  const previousImagePublicId = recipe.imagePublicId;
 
   recipe.title = input.title;
   recipe.summary = input.summary;
@@ -481,6 +483,10 @@ export async function updateRecipe(
   recipe.tags = input.tags;
   await recipe.save();
 
+  if (previousImagePublicId && previousImagePublicId !== recipe.imagePublicId) {
+    await deleteManagedImageAfterPersistence(previousImagePublicId);
+  }
+
   return toPublicRecipe(recipe);
 }
 
@@ -489,6 +495,10 @@ export async function deleteRecipe(recipeId: string, actor: AccessTokenIdentity)
 
   if (recipe === null) {
     throw new AppError(404, 'RECIPE_NOT_FOUND', 'Recipe was not found.');
+  }
+
+  if (recipe.imagePublicId) {
+    await deleteManagedImageAfterPersistence(recipe.imagePublicId);
   }
 }
 

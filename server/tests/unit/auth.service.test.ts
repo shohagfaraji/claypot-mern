@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   createUserMock,
+  deleteManagedImageAfterPersistenceMock,
   findUserByIdMock,
   findUserMock,
   hashPasswordMock,
@@ -10,12 +11,17 @@ const {
   verifyPasswordMock,
 } = vi.hoisted(() => ({
   createUserMock: vi.fn(),
+  deleteManagedImageAfterPersistenceMock: vi.fn(),
   findUserByIdMock: vi.fn(),
   findUserMock: vi.fn(),
   hashPasswordMock: vi.fn(),
   selectCurrentUserMock: vi.fn(),
   selectPasswordMock: vi.fn(),
   verifyPasswordMock: vi.fn(),
+}));
+
+vi.mock('../../src/services/media.service.js', () => ({
+  deleteManagedImageAfterPersistence: deleteManagedImageAfterPersistenceMock,
 }));
 
 vi.mock('../../src/models/user.model.js', () => ({
@@ -331,6 +337,12 @@ describe('current user profile update', () => {
     expect(user.bio).toBeNull();
     expect(user.username).toBe('amina_kitchen');
     expect(user.email).toBe('amina@example.com');
+    expect(deleteManagedImageAfterPersistenceMock).toHaveBeenCalledWith(
+      'claypot/avatars/user-id/avatar-id',
+    );
+    expect(user.save.mock.invocationCallOrder[0]).toBeLessThan(
+      deleteManagedImageAfterPersistenceMock.mock.invocationCallOrder[0] ?? 0,
+    );
   });
 
   it('rejects managed avatars outside the current user folder', async () => {

@@ -1,8 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { v2 as cloudinary } from 'cloudinary';
 import { env } from '../config/env.js';
+import { logger } from '../config/logger.js';
 import { AppError } from '../errors/app-error.js';
-import type { ImagePurpose } from '../schemas/media.schema.js';
+import { RecipeModel } from '../models/recipe.model.js';
+import { UserModel } from '../models/user.model.js';
+import type { DiscardImageInput, ImagePurpose } from '../schemas/media.schema.js';
 
 const allowedFormats = 'avif,jpeg,jpg,png,webp';
 const maximumDimension = 2400;
@@ -41,6 +44,21 @@ function getCloudinaryCredentials() {
   };
 }
 
+function getImageNamespace(userId: string, purpose: ImagePurpose) {
+  const folderName = purpose === 'avatar' ? 'avatars' : 'recipes';
+  return `claypot/${folderName}/${userId}`;
+}
+
+function configureCloudinary() {
+  const credentials = getCloudinaryCredentials();
+  cloudinary.config({
+    cloud_name: credentials.cloudName,
+    api_key: credentials.apiKey,
+    api_secret: credentials.apiSecret,
+    secure: true,
+  });
+}
+
 export function createImageUploadSignature(
   userId: string,
   purpose: ImagePurpose,
@@ -48,8 +66,7 @@ export function createImageUploadSignature(
 ): ImageUploadSignature {
   const credentials = getCloudinaryCredentials();
   const timestamp = Math.floor(now.getTime() / 1000);
-  const folderName = purpose === 'avatar' ? 'avatars' : 'recipes';
-  const assetFolder = `claypot/${folderName}/${userId}`;
+  const assetFolder = getImageNamespace(userId, purpose);
   const publicId = `${assetFolder}/${randomUUID()}`;
   const transformation = `c_limit,w_${maximumDimension},h_${maximumDimension}`;
   const parameters = {
@@ -72,4 +89,40 @@ export function createImageUploadSignature(
     allowedFormats,
     transformation,
   };
+}
+
+export async function deleteManagedImage(publicId: string): Promise<void> {
+  configureCloudinary();
+  await cloudinary.uploader.destroy(publicId, {
+    invalidate: true,
+    resource_type: 'image',
+    type: 'upload',
+  });
+}
+
+export async function deleteManagedImageAfterPersistence(publicId: string): Promise<void> {
+  try {
+    await deleteManagedImage(publicId);
+  } catch (error) {
+    logger.warn({ err: error, publicId }, 'Cloudinary image cleanup failed');
+  }
+}
+
+export async function discardUnusedImage(userId: string, input: DiscardImageInput): Promise<void> {
+  const namespace = getImageNamespace(userId, input.purpose);
+
+  if (!input.publicId.startsWith(`${namespace}/`)) {
+    throw new AppError(404, 'MEDIA_ASSET_NOT_FOUND', 'Image asset was not found.');
+  }
+
+  const assetInUse =
+    input.purpose === 'avatar'
+      ? await UserModel.exists({ avatarPublicId: input.publicId })
+      : await RecipeModel.exists({ imagePublicId: input.publicId });
+
+  if (assetInUse !== null) {
+    throw new AppError(409, 'MEDIA_ASSET_IN_USE', 'The image is currently in use.');
+  }
+
+  await deleteManagedImage(input.publicId);
 }
