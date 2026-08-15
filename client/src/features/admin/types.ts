@@ -32,3 +32,31 @@ export interface AdminDashboard {
   recentRecipes: AdminRecentRecipe[];
   recentUsers: AdminRecentUser[];
 }
+
+export interface AdminRecipeListItem {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string;
+  imageUrl: string | null;
+  status: 'draft' | 'published';
+  reviewCount: number;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  author: {
+    id: string;
+    name: string;
+    username: string;
+  };
+}
+
+export interface AdminRecipeListData {
+  recipes: AdminRecipeListItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
