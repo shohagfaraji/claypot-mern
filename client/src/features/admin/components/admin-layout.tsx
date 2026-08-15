@@ -1,14 +1,19 @@
-import { ArrowLeft, LayoutDashboard, ShieldCheck } from 'lucide-react';
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { ArrowLeft, BookOpen, LayoutDashboard, ShieldCheck } from 'lucide-react';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { getInitials } from '@/lib/get-initials';
 import { cn } from '@/lib/utils';
 
-const navigation = [{ label: 'Overview', href: '/admin', icon: LayoutDashboard }];
+const navigation = [
+  { label: 'Overview', href: '/admin', icon: LayoutDashboard },
+  { label: 'Recipes', href: '/admin/recipes', icon: BookOpen },
+];
 
 export function AdminLayout() {
   const { user } = useAuth();
+  const location = useLocation();
+  const activeLabel = navigation.find((item) => item.href === location.pathname)?.label ?? 'Admin';
 
   return (
     <div className="min-h-svh bg-muted/25 lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
@@ -71,7 +76,7 @@ export function AdminLayout() {
             <img className="size-9 object-contain" src="/brand/claypot-logo.png" alt="" />
             <div>
               <p className="text-sm font-bold">Claypot Admin</p>
-              <p className="text-[11px] text-muted-foreground">Overview</p>
+              <p className="text-[11px] text-muted-foreground">{activeLabel}</p>
             </div>
           </Link>
           <Link
@@ -82,6 +87,28 @@ export function AdminLayout() {
             <ArrowLeft className="size-4" />
           </Link>
         </header>
+
+        <nav
+          className="flex gap-1 overflow-x-auto border-b bg-background px-5 py-2 lg:hidden"
+          aria-label="Admin navigation"
+        >
+          {navigation.map((item) => (
+            <NavLink
+              key={item.href}
+              className={({ isActive }) =>
+                cn(
+                  'flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground',
+                  isActive && 'bg-primary/10 text-primary',
+                )
+              }
+              to={item.href}
+              end
+            >
+              <item.icon className="size-3.5" />
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
 
         <main>
           <Outlet />
