@@ -1,9 +1,11 @@
 import { randomBytes } from 'node:crypto';
-import { Types, type PipelineStage } from 'mongoose';
+import { startSession, Types, type PipelineStage } from 'mongoose';
 import { AppError } from '../errors/app-error.js';
 import type { AccessTokenIdentity } from '../lib/access-token.js';
 import { createSlugBase } from '../lib/slug.js';
 import { RecipeModel, type Recipe } from '../models/recipe.model.js';
+import { ReviewModel } from '../models/review.model.js';
+import { SavedRecipeModel } from '../models/saved-recipe.model.js';
 import type {
   CreateRecipeInput,
   ListOwnRecipesQuery,
@@ -491,14 +493,30 @@ export async function updateRecipe(
 }
 
 export async function deleteRecipe(recipeId: string, actor: AccessTokenIdentity): Promise<void> {
-  const recipe = await RecipeModel.findOneAndDelete(getOwnedRecipeFilter(recipeId, actor));
+  const session = await startSession();
+  const recipeObjectId = new Types.ObjectId(recipeId);
+  let imagePublicId: string | null = null;
 
-  if (recipe === null) {
-    throw new AppError(404, 'RECIPE_NOT_FOUND', 'Recipe was not found.');
+  try {
+    await session.withTransaction(async () => {
+      const recipe = await RecipeModel.findOneAndDelete(getOwnedRecipeFilter(recipeId, actor), {
+        session,
+      });
+
+      if (recipe === null) {
+        throw new AppError(404, 'RECIPE_NOT_FOUND', 'Recipe was not found.');
+      }
+
+      imagePublicId = recipe.imagePublicId;
+      await ReviewModel.deleteMany({ recipe: recipeObjectId }, { session });
+      await SavedRecipeModel.deleteMany({ recipe: recipeObjectId }, { session });
+    });
+  } finally {
+    await session.endSession();
   }
 
-  if (recipe.imagePublicId) {
-    await deleteManagedImageAfterPersistence(recipe.imagePublicId);
+  if (imagePublicId) {
+    await deleteManagedImageAfterPersistence(imagePublicId);
   }
 }
 
