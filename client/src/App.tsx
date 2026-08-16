@@ -12,6 +12,9 @@ const AdminDashboardPage = lazy(async () => ({
 const AdminRecipesPage = lazy(async () => ({
   default: (await import('@/pages/admin-recipes-page')).AdminRecipesPage,
 }));
+const AdminUsersPage = lazy(async () => ({
+  default: (await import('@/pages/admin-users-page')).AdminUsersPage,
+}));
 const AccountPage = lazy(async () => ({
   default: (await import('@/pages/account-page')).AccountPage,
 }));
@@ -69,6 +72,7 @@ function App() {
             <Route element={<AdminLayout />}>
               <Route path="admin" element={<AdminDashboardPage />} />
               <Route path="admin/recipes" element={<AdminRecipesPage />} />
+              <Route path="admin/users" element={<AdminUsersPage />} />
             </Route>
           </Route>
           <Route path="account" element={<AccountPage />} />

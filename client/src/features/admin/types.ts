@@ -60,3 +60,27 @@ export interface AdminRecipeListData {
     totalPages: number;
   };
 }
+
+export interface AdminUserListItem {
+  id: string;
+  name: string;
+  username: string;
+  email: string;
+  avatarUrl: string | null;
+  role: 'user' | 'admin';
+  isEmailVerified: boolean;
+  recipeCount: number;
+  reviewCount: number;
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
+export interface AdminUserListData {
+  users: AdminUserListItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
