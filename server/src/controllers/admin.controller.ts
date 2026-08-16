@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'express';
-import type { ListAdminRecipesQuery } from '../schemas/admin.schema.js';
-import { getAdminDashboard, listAdminRecipes } from '../services/admin.service.js';
+import type { ListAdminRecipesQuery, ListAdminUsersQuery } from '../schemas/admin.schema.js';
+import { getAdminDashboard, listAdminRecipes, listAdminUsers } from '../services/admin.service.js';
 
 export const showAdminDashboard: RequestHandler = async (_request, response) => {
   const dashboard = await getAdminDashboard();
@@ -12,6 +12,16 @@ export const listRecipesForAdmin: RequestHandler = async (request, response) => 
   response.status(200).json({
     data: {
       recipes: result.items,
+      pagination: result.pagination,
+    },
+  });
+};
+
+export const listUsersForAdmin: RequestHandler = async (request, response) => {
+  const result = await listAdminUsers(request.validatedQuery as ListAdminUsersQuery);
+  response.status(200).json({
+    data: {
+      users: result.items,
       pagination: result.pagination,
     },
   });
