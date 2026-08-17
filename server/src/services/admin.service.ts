@@ -1,7 +1,14 @@
+import { startSession, Types } from 'mongoose';
+import { AppError } from '../errors/app-error.js';
 import { RecipeModel } from '../models/recipe.model.js';
+import { RefreshSessionModel } from '../models/refresh-session.model.js';
 import { ReviewModel } from '../models/review.model.js';
 import { UserModel } from '../models/user.model.js';
-import type { ListAdminRecipesQuery, ListAdminUsersQuery } from '../schemas/admin.schema.js';
+import type {
+  ListAdminRecipesQuery,
+  ListAdminUsersQuery,
+  UpdateAdminUserRoleInput,
+} from '../schemas/admin.schema.js';
 
 export interface AdminDashboardMetrics {
   totalUsers: number;
@@ -98,6 +105,11 @@ export interface PaginatedAdminUsers {
     total: number;
     totalPages: number;
   };
+}
+
+export interface AdminUserRoleUpdate {
+  id: string;
+  role: 'user' | 'admin';
 }
 
 const recentItemLimit = 5;
@@ -211,6 +223,64 @@ export async function listAdminUsers(query: ListAdminUsersQuery): Promise<Pagina
       totalPages: Math.ceil(total / query.limit),
     },
   };
+}
+
+export async function updateAdminUserRole(
+  actorUserId: string,
+  targetUserId: string,
+  input: UpdateAdminUserRoleInput,
+): Promise<AdminUserRoleUpdate> {
+  if (actorUserId === targetUserId) {
+    throw new AppError(400, 'ADMIN_SELF_ROLE_CHANGE', 'You cannot change your own admin role.');
+  }
+
+  const session = await startSession();
+  const targetId = new Types.ObjectId(targetUserId);
+  let updatedUser: AdminUserRoleUpdate | null = null;
+
+  try {
+    await session.withTransaction(async () => {
+      const user = await UserModel.findOne({ _id: targetId }, null, { session });
+
+      if (user === null) {
+        throw new AppError(404, 'USER_NOT_FOUND', 'User was not found.');
+      }
+
+      if (user.role === input.role) {
+        updatedUser = { id: user.id, role: user.role };
+        return;
+      }
+
+      if (user.role === 'admin' && input.role === 'user') {
+        const adminCount = await UserModel.countDocuments({ role: 'admin' }, { session });
+
+        if (adminCount <= 1) {
+          throw new AppError(
+            409,
+            'LAST_ADMIN_REQUIRED',
+            'The platform must keep at least one administrator.',
+          );
+        }
+      }
+
+      user.role = input.role;
+      await user.save({ session });
+      await RefreshSessionModel.updateMany(
+        { user: targetId, revokedAt: null },
+        { $set: { revokedAt: new Date() } },
+        { session },
+      );
+      updatedUser = { id: user.id, role: user.role };
+    });
+  } finally {
+    await session.endSession();
+  }
+
+  if (updatedUser === null) {
+    throw new Error('User role update did not complete.');
+  }
+
+  return updatedUser;
 }
 
 export async function listAdminRecipes(

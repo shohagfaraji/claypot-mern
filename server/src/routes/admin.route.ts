@@ -1,13 +1,19 @@
 import { Router } from 'express';
 import {
+  changeUserRole,
   listRecipesForAdmin,
   listUsersForAdmin,
   showAdminDashboard,
 } from '../controllers/admin.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { authorizeRoles } from '../middleware/authorize.js';
-import { validateQuery } from '../middleware/validate-request.js';
-import { listAdminRecipesQuerySchema, listAdminUsersQuerySchema } from '../schemas/admin.schema.js';
+import { validateBody, validateParams, validateQuery } from '../middleware/validate-request.js';
+import {
+  adminUserIdParamsSchema,
+  listAdminRecipesQuerySchema,
+  listAdminUsersQuerySchema,
+  updateAdminUserRoleInputSchema,
+} from '../schemas/admin.schema.js';
 
 export const adminRouter = Router();
 
@@ -25,4 +31,12 @@ adminRouter.get(
   authorizeRoles('admin'),
   validateQuery(listAdminUsersQuerySchema),
   listUsersForAdmin,
+);
+adminRouter.patch(
+  '/users/:userId/role',
+  authenticate,
+  authorizeRoles('admin'),
+  validateParams(adminUserIdParamsSchema),
+  validateBody(updateAdminUserRoleInputSchema),
+  changeUserRole,
 );

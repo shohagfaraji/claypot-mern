@@ -2,17 +2,30 @@ import {
   BadgeCheck,
   BookOpen,
   Clock3,
+  LoaderCircle,
   Mail,
   MessageSquare,
   RefreshCw,
   Search,
   ShieldCheck,
   SlidersHorizontal,
+  UserRoundCog,
   Users,
 } from 'lucide-react';
-import { type SubmitEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,8 +38,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { updateAdminUserRole } from '@/features/admin/api/update-admin-user-role';
 import { useAdminUsers } from '@/features/admin/hooks/use-admin-users';
 import type { AdminUserListItem } from '@/features/admin/types';
+import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuthenticatedRequest } from '@/features/auth/hooks/use-authenticated-request';
 import { getInitials } from '@/lib/get-initials';
 
 const roles = ['user', 'admin'] as const;
@@ -73,6 +89,8 @@ function UserDirectorySkeleton() {
 
 export function AdminUsersPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const request = useAuthenticatedRequest();
+  const { user: currentUser } = useAuth();
   const search = searchParams.get('search')?.trim() ?? '';
   const roleParam = searchParams.get('role');
   const verificationParam = searchParams.get('verification');
@@ -89,6 +107,9 @@ export function AdminUsersPage() {
   const { users, pagination, isLoading, error, retry } = useAdminUsers(query.toString());
   const hasFilters =
     search.length > 0 || role !== 'all' || verification !== 'all' || sort !== 'newest';
+  const [memberToChange, setMemberToChange] = useState<AdminUserListItem | null>(null);
+  const [isChangingRole, setIsChangingRole] = useState(false);
+  const [roleError, setRoleError] = useState<string | null>(null);
 
   function updateFilter(name: string, value: string | null) {
     setSearchParams((current) => {
@@ -114,6 +135,39 @@ export function AdminUsersPage() {
       return next;
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function openRoleDialog(member: AdminUserListItem) {
+    setRoleError(null);
+    setMemberToChange(member);
+  }
+
+  async function handleRoleChange() {
+    if (memberToChange === null) return;
+
+    const nextRole = memberToChange.role === 'admin' ? 'user' : 'admin';
+    setRoleError(null);
+    setIsChangingRole(true);
+
+    try {
+      await updateAdminUserRole(request, memberToChange.id, nextRole);
+      setMemberToChange(null);
+      setIsChangingRole(false);
+
+      const leavesCurrentFilter = role !== 'all' && role !== nextRole;
+      if (leavesCurrentFilter && users.length === 1 && pagination.page > 1) {
+        goToPage(pagination.page - 1);
+      } else {
+        retry();
+      }
+    } catch (updateRoleError) {
+      setRoleError(
+        updateRoleError instanceof Error
+          ? updateRoleError.message
+          : 'The member role could not be updated.',
+      );
+      setIsChangingRole(false);
+    }
   }
 
   return (
@@ -268,7 +322,8 @@ export function AdminUsersPage() {
                     <th className="px-4 py-3 font-medium">Verification</th>
                     <th className="px-4 py-3 font-medium">Activity</th>
                     <th className="px-4 py-3 font-medium">Last login</th>
-                    <th className="px-5 py-3 text-right font-medium">Joined</th>
+                    <th className="px-4 py-3 font-medium">Joined</th>
+                    <th className="px-5 py-3 text-right font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -326,8 +381,25 @@ export function AdminUsersPage() {
                           ? dateFormatter.format(new Date(member.lastLoginAt))
                           : 'Never'}
                       </td>
-                      <td className="px-5 py-4 text-right whitespace-nowrap text-muted-foreground">
+                      <td className="px-4 py-4 whitespace-nowrap text-muted-foreground">
                         {dateFormatter.format(new Date(member.createdAt))}
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        {member.id === currentUser?.id ? (
+                          <span className="text-xs font-medium text-muted-foreground">
+                            Current account
+                          </span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant={member.role === 'admin' ? 'outline' : 'default'}
+                            disabled={isChangingRole}
+                            onClick={() => openRoleDialog(member)}
+                          >
+                            <UserRoundCog />
+                            {member.role === 'admin' ? 'Demote' : 'Make admin'}
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -388,6 +460,24 @@ export function AdminUsersPage() {
                         {member.isEmailVerified ? 'Verified' : 'Unverified'}
                       </Badge>
                     </div>
+                    <div className="mt-4 border-t pt-4">
+                      {member.id === currentUser?.id ? (
+                        <p className="text-center text-xs font-medium text-muted-foreground">
+                          This is your current account
+                        </p>
+                      ) : (
+                        <Button
+                          className="w-full"
+                          size="sm"
+                          variant={member.role === 'admin' ? 'outline' : 'default'}
+                          disabled={isChangingRole}
+                          onClick={() => openRoleDialog(member)}
+                        >
+                          <UserRoundCog />
+                          {member.role === 'admin' ? 'Demote to user' : 'Promote to admin'}
+                        </Button>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -420,6 +510,63 @@ export function AdminUsersPage() {
           </Button>
         </nav>
       )}
+
+      <AlertDialog
+        open={memberToChange !== null}
+        onOpenChange={(open) => {
+          if (!open && !isChangingRole) {
+            setMemberToChange(null);
+            setRoleError(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia
+              className={
+                memberToChange?.role === 'admin'
+                  ? 'bg-destructive/10 text-destructive'
+                  : 'bg-primary/10 text-primary'
+              }
+            >
+              <UserRoundCog />
+            </AlertDialogMedia>
+            <AlertDialogTitle>
+              {memberToChange?.role === 'admin'
+                ? `Demote ${memberToChange.name}?`
+                : `Promote ${memberToChange?.name ?? 'this member'}?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {memberToChange?.role === 'admin'
+                ? 'This removes access to administration and moderation features.'
+                : 'This grants access to user management, recipe moderation, and other administration features.'}{' '}
+              Existing refresh sessions will be revoked, so the member may need to sign in again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {roleError && (
+            <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {roleError}
+            </p>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isChangingRole}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant={memberToChange?.role === 'admin' ? 'destructive' : 'default'}
+              disabled={isChangingRole}
+              onClick={() => void handleRoleChange()}
+            >
+              {isChangingRole && <LoaderCircle className="animate-spin" />}
+              {isChangingRole
+                ? 'Updating…'
+                : memberToChange?.role === 'admin'
+                  ? 'Demote to user'
+                  : 'Promote to admin'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

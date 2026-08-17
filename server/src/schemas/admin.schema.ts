@@ -24,5 +24,19 @@ export const listAdminUsersQuerySchema = z.strictObject({
   sort: z.enum(['newest', 'oldest', 'name', 'recent-login']).default('newest'),
 });
 
+export const adminUserIdParamsSchema = z.strictObject({
+  userId: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-f0-9]{24}$/, 'User ID is invalid.'),
+});
+
+export const updateAdminUserRoleInputSchema = z.strictObject({
+  role: z.enum(userRoles),
+});
+
 export type ListAdminRecipesQuery = z.infer<typeof listAdminRecipesQuerySchema>;
 export type ListAdminUsersQuery = z.infer<typeof listAdminUsersQuerySchema>;
+export type AdminUserIdParams = z.infer<typeof adminUserIdParamsSchema>;
+export type UpdateAdminUserRoleInput = z.infer<typeof updateAdminUserRoleInputSchema>;

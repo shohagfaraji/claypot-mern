@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  adminUserIdParamsSchema,
   listAdminRecipesQuerySchema,
   listAdminUsersQuerySchema,
+  updateAdminUserRoleInputSchema,
 } from '../../src/schemas/admin.schema.js';
 
 describe('admin recipe list query schema', () => {
@@ -71,5 +73,22 @@ describe('admin user list query schema', () => {
     expect(listAdminUsersQuerySchema.safeParse({ role: 'owner' }).success).toBe(false);
     expect(listAdminUsersQuerySchema.safeParse({ verification: 'pending' }).success).toBe(false);
     expect(listAdminUsersQuerySchema.safeParse({ passwordHash: 'value' }).success).toBe(false);
+  });
+});
+
+describe('admin user role schemas', () => {
+  it('accepts managed roles for a valid user identifier', () => {
+    expect(adminUserIdParamsSchema.parse({ userId: '507F1F77BCF86CD799439011' })).toEqual({
+      userId: '507f1f77bcf86cd799439011',
+    });
+    expect(updateAdminUserRoleInputSchema.parse({ role: 'admin' })).toEqual({ role: 'admin' });
+  });
+
+  it('rejects malformed identifiers, roles, and unknown fields', () => {
+    expect(adminUserIdParamsSchema.safeParse({ userId: 'invalid-id' }).success).toBe(false);
+    expect(updateAdminUserRoleInputSchema.safeParse({ role: 'owner' }).success).toBe(false);
+    expect(
+      updateAdminUserRoleInputSchema.safeParse({ role: 'admin', userId: 'another-user' }).success,
+    ).toBe(false);
   });
 });
