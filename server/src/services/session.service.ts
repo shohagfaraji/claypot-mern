@@ -91,7 +91,7 @@ export async function rotateAuthSession(
         ...(metadata.ipAddress === undefined ? {} : { ipAddress: metadata.ipAddress }),
       },
     },
-    { new: true },
+    { returnDocument: 'after' },
   );
 
   if (rotatedSession === null) {

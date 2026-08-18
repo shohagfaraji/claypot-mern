@@ -91,7 +91,7 @@ describe('email verification service', () => {
     expect(findTokenAndUpdateMock).toHaveBeenCalledWith(
       expect.objectContaining({ user: new Types.ObjectId(userId) }),
       expect.any(Object),
-      { upsert: true, new: true, setDefaultsOnInsert: true },
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
     );
     expect(storedUpdate.$set.tokenHash).toMatch(/^[a-f0-9]{64}$/);
     expect(storedUpdate.$set.expiresAt.getTime()).toBeGreaterThan(Date.now());
