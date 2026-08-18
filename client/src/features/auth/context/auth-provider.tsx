@@ -8,7 +8,13 @@ import {
   refreshAccessToken,
   register,
 } from '@/features/auth/api/auth';
-import type { AuthSession, AuthUser, LoginInput, RegisterInput } from '@/features/auth/types';
+import type {
+  AuthSession,
+  AuthUser,
+  LoginInput,
+  RegisterInput,
+  RegistrationSession,
+} from '@/features/auth/types';
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -71,10 +77,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signUp = useCallback(async (input: RegisterInput) => {
     const session = await register(input);
-    sessionRestoreRequest = Promise.resolve(session);
-    setState({ ...session, status: 'authenticated' });
+    const authSession: AuthSession = {
+      user: session.user,
+      accessToken: session.accessToken,
+    };
+    sessionRestoreRequest = Promise.resolve(authSession);
+    setState({ ...authSession, status: 'authenticated' });
 
-    return session;
+    return session satisfies RegistrationSession;
   }, []);
 
   const signOut = useCallback(async () => {

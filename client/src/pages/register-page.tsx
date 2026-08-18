@@ -28,7 +28,7 @@ export function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      await signUp({
+      const session = await signUp({
         name: String(formData.get('name') ?? '').trim(),
         username: String(formData.get('username') ?? '')
           .trim()
@@ -38,7 +38,13 @@ export function RegisterPage() {
           .toLowerCase(),
         password: String(formData.get('password') ?? ''),
       });
-      navigate('/', { replace: true });
+      navigate('/account', {
+        replace: true,
+        state: {
+          registrationCompleted: true,
+          verificationEmailSent: session.verificationEmailSent,
+        },
+      });
     } catch (registrationError) {
       setError(
         registrationError instanceof Error

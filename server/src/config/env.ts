@@ -27,6 +27,15 @@ const envSchema = z
     ACCESS_TOKEN_SECRET: z.string().min(32).default(developmentAccessTokenSecret),
     ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().max(60).default(15),
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().max(30).default(7),
+    RESEND_API_KEY: z.string().trim().min(10).optional(),
+    EMAIL_FROM: z.string().trim().min(3).max(320).optional(),
+    EMAIL_VERIFICATION_TOKEN_TTL_HOURS: z.coerce.number().int().positive().max(168).default(24),
+    EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(3_600)
+      .default(60),
     CLOUDINARY_CLOUD_NAME: z.string().trim().min(1).optional(),
     CLOUDINARY_API_KEY: z.string().trim().min(1).optional(),
     CLOUDINARY_API_SECRET: z.string().trim().min(1).optional(),
@@ -55,6 +64,17 @@ const envSchema = z
         code: 'custom',
         path: ['CLOUDINARY_CLOUD_NAME'],
         message: 'Cloudinary cloud name, API key, and API secret must be configured together',
+      });
+    }
+
+    const emailValues = [environment.RESEND_API_KEY, environment.EMAIL_FROM];
+    const configuredEmailValues = emailValues.filter((value) => value !== undefined);
+
+    if (configuredEmailValues.length > 0 && configuredEmailValues.length < emailValues.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['RESEND_API_KEY'],
+        message: 'Resend API key and email sender must be configured together',
       });
     }
   });

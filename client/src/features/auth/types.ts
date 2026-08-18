@@ -16,6 +16,13 @@ export interface AuthSession {
   accessToken: string;
 }
 
+export interface RegistrationSession extends AuthSession {
+  verificationEmailSent: boolean;
+}
+
+export type EmailVerificationRequestStatus = 'sent' | 'already_verified';
+export type EmailVerificationStatus = 'verified' | 'already_verified';
+
 export interface LoginInput {
   identifier: string;
   password: string;

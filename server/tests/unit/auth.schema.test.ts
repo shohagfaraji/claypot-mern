@@ -3,6 +3,7 @@ import {
   loginInputSchema,
   registerInputSchema,
   updateProfileInputSchema,
+  verifyEmailInputSchema,
 } from '../../src/schemas/auth.schema.js';
 
 const validRegistration = {
@@ -110,6 +111,22 @@ describe('login input schema', () => {
         }),
       ]),
     );
+  });
+});
+
+describe('email verification input schema', () => {
+  it('accepts a URL-safe 256-bit token', () => {
+    expect(verifyEmailInputSchema.parse({ token: 'a'.repeat(43) })).toEqual({
+      token: 'a'.repeat(43),
+    });
+  });
+
+  it('rejects malformed and unexpected values', () => {
+    expect(() => verifyEmailInputSchema.parse({ token: 'short' })).toThrow();
+    expect(() => verifyEmailInputSchema.parse({ token: '!'.repeat(43) })).toThrow();
+    expect(() =>
+      verifyEmailInputSchema.parse({ token: 'a'.repeat(43), userId: 'user-id' }),
+    ).toThrow();
   });
 });
 
