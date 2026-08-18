@@ -5,11 +5,13 @@ import {
   LoaderCircle,
   LogOut,
   Mail,
+  MailCheck,
+  RefreshCw,
   Save,
   ShieldCheck,
 } from 'lucide-react';
 import { useState, type SubmitEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { AppShell } from '@/components/layout/app-shell';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +20,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { updateProfile } from '@/features/auth/api/auth';
+import { resendVerificationEmail, updateProfile } from '@/features/auth/api/auth';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useAuthenticatedRequest } from '@/features/auth/hooks/use-authenticated-request';
 import { ImageUploadField } from '@/features/media/components/image-upload-field';
@@ -31,10 +33,17 @@ const dateFormatter = new Intl.DateTimeFormat('en', {
   year: 'numeric',
 });
 
+interface AccountLocationState {
+  registrationCompleted?: boolean;
+  verificationEmailSent?: boolean;
+}
+
 export function AccountPage() {
   const { user, signOut, updateSessionUser } = useAuth();
   const request = useAuthenticatedRequest();
   const navigate = useNavigate();
+  const location = useLocation();
+  const registrationState = location.state as AccountLocationState | null;
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -45,6 +54,15 @@ export function AccountPage() {
     'avatar',
   );
   const [isAvatarUploading, setIsAvatarUploading] = useState(false);
+  const [isSendingVerification, setIsSendingVerification] = useState(false);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [verificationNotice, setVerificationNotice] = useState<string | null>(() => {
+    if (!registrationState?.registrationCompleted) return null;
+
+    return registrationState.verificationEmailSent
+      ? 'A verification link has been sent to your email address.'
+      : 'Your account is ready, but the verification email could not be delivered.';
+  });
 
   if (user === null) {
     return null;
@@ -101,6 +119,33 @@ export function AccountPage() {
           : 'Your profile could not be updated.',
       );
       setIsSavingProfile(false);
+    }
+  }
+
+  async function handleVerificationRequest() {
+    if (user === null) return;
+
+    setVerificationError(null);
+    setVerificationNotice(null);
+    setIsSendingVerification(true);
+
+    try {
+      const status = await resendVerificationEmail(request);
+
+      if (status === 'already_verified') {
+        updateSessionUser({ ...user, isEmailVerified: true });
+        setVerificationNotice('Your email address is already verified.');
+      } else {
+        setVerificationNotice('A new verification link has been sent to your email address.');
+      }
+      setIsSendingVerification(false);
+    } catch (sendVerificationError) {
+      setVerificationError(
+        sendVerificationError instanceof Error
+          ? sendVerificationError.message
+          : 'The verification email could not be sent.',
+      );
+      setIsSendingVerification(false);
     }
   }
 
@@ -172,36 +217,87 @@ export function AccountPage() {
           </CardContent>
         </Card>
 
-        <Card className="h-fit border-border/70 shadow-sm">
-          <CardContent className="p-6 sm:p-8">
-            <div className="grid size-11 place-items-center rounded-xl bg-secondary text-primary">
-              <ShieldCheck className="size-5" />
-            </div>
-            <h2 className="mt-5 font-serif text-2xl font-medium">Session security</h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Signing out revokes this session and removes its secure refresh cookie.
-            </p>
-
-            {error && (
-              <div
-                className="mt-5 rounded-xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-sm text-destructive"
-                role="alert"
-              >
-                {error}
+        <div className="grid content-start gap-6">
+          <Card className="border-border/70 shadow-sm">
+            <CardContent className="p-6 sm:p-8">
+              <div className="grid size-11 place-items-center rounded-xl bg-secondary text-primary">
+                <MailCheck className="size-5" />
               </div>
-            )}
+              <h2 className="mt-5 font-serif text-2xl font-medium">Email verification</h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                {user.isEmailVerified
+                  ? 'Your email address has been confirmed.'
+                  : `We will send a private verification link to ${user.email}.`}
+              </p>
 
-            <Button
-              className="mt-6 w-full"
-              variant="outline"
-              disabled={isSigningOut}
-              onClick={handleSignOut}
-            >
-              {isSigningOut ? <LoaderCircle className="animate-spin" /> : <LogOut />}
-              {isSigningOut ? 'Signing out…' : 'Sign out'}
-            </Button>
-          </CardContent>
-        </Card>
+              {verificationNotice && (
+                <div
+                  className="mt-5 flex gap-2 rounded-xl border border-primary/20 bg-secondary/55 px-4 py-3 text-sm"
+                  role="status"
+                >
+                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
+                  <span>{verificationNotice}</span>
+                </div>
+              )}
+
+              {verificationError && (
+                <div
+                  className="mt-5 rounded-xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-sm text-destructive"
+                  role="alert"
+                >
+                  {verificationError}
+                </div>
+              )}
+
+              {!user.isEmailVerified && (
+                <Button
+                  className="mt-6 w-full"
+                  variant="outline"
+                  disabled={isSendingVerification}
+                  onClick={() => void handleVerificationRequest()}
+                >
+                  {isSendingVerification ? (
+                    <LoaderCircle className="animate-spin" />
+                  ) : (
+                    <RefreshCw />
+                  )}
+                  {isSendingVerification ? 'Sending link…' : 'Send verification email'}
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/70 shadow-sm">
+            <CardContent className="p-6 sm:p-8">
+              <div className="grid size-11 place-items-center rounded-xl bg-secondary text-primary">
+                <ShieldCheck className="size-5" />
+              </div>
+              <h2 className="mt-5 font-serif text-2xl font-medium">Session security</h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Signing out revokes this session and removes its secure refresh cookie.
+              </p>
+
+              {error && (
+                <div
+                  className="mt-5 rounded-xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-sm text-destructive"
+                  role="alert"
+                >
+                  {error}
+                </div>
+              )}
+
+              <Button
+                className="mt-6 w-full"
+                variant="outline"
+                disabled={isSigningOut}
+                onClick={handleSignOut}
+              >
+                {isSigningOut ? <LoaderCircle className="animate-spin" /> : <LogOut />}
+                {isSigningOut ? 'Signing out…' : 'Sign out'}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </section>
 
       <section className="mx-auto w-full max-w-7xl px-5 pb-12 sm:px-8 lg:px-10">

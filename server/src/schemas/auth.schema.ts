@@ -63,6 +63,14 @@ export const loginInputSchema = z.strictObject({
     }),
 });
 
+export const verifyEmailInputSchema = z.strictObject({
+  token: z
+    .string()
+    .trim()
+    .length(43, 'Verification token is invalid.')
+    .regex(/^[a-zA-Z0-9_-]+$/, 'Verification token is invalid.'),
+});
+
 export const updateProfileInputSchema = z
   .strictObject({
     name: z
@@ -103,4 +111,5 @@ export const updateProfileInputSchema = z
 
 export type RegisterInput = z.infer<typeof registerInputSchema>;
 export type LoginInput = z.infer<typeof loginInputSchema>;
+export type VerifyEmailInput = z.infer<typeof verifyEmailInputSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileInputSchema>;

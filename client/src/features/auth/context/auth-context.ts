@@ -1,6 +1,12 @@
 import { createContext } from 'react';
 
-import type { AuthSession, AuthUser, LoginInput, RegisterInput } from '@/features/auth/types';
+import type {
+  AuthSession,
+  AuthUser,
+  LoginInput,
+  RegisterInput,
+  RegistrationSession,
+} from '@/features/auth/types';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
@@ -9,7 +15,7 @@ export interface AuthContextValue {
   accessToken: string | null;
   status: AuthStatus;
   signIn: (input: LoginInput) => Promise<AuthSession>;
-  signUp: (input: RegisterInput) => Promise<AuthSession>;
+  signUp: (input: RegisterInput) => Promise<RegistrationSession>;
   signOut: () => Promise<void>;
   renewAccessToken: () => Promise<string>;
   updateSessionUser: (user: AuthUser) => void;

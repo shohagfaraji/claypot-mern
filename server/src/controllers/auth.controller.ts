@@ -5,7 +5,12 @@ import {
   getRefreshTokenCookieOptions,
   refreshTokenCookieName,
 } from '../lib/refresh-token.js';
-import type { LoginInput, RegisterInput, UpdateProfileInput } from '../schemas/auth.schema.js';
+import type {
+  LoginInput,
+  RegisterInput,
+  UpdateProfileInput,
+  VerifyEmailInput,
+} from '../schemas/auth.schema.js';
 import {
   authenticateUser,
   getCurrentUser,
@@ -13,6 +18,11 @@ import {
   registerUser,
   updateCurrentUser,
 } from '../services/auth.service.js';
+import {
+  requestEmailVerification,
+  sendEmailVerification,
+  verifyEmail,
+} from '../services/email-verification.service.js';
 import {
   createAuthSession,
   revokeAuthSession,
@@ -41,11 +51,19 @@ async function startSession(request: Request, response: Response, user: PublicUs
 export const register: RequestHandler = async (request, response) => {
   const user = await registerUser(request.body as RegisterInput);
   const accessToken = await startSession(request, response, user);
+  let verificationEmailSent = false;
+
+  try {
+    verificationEmailSent = (await sendEmailVerification(user)) === 'sent';
+  } catch (error) {
+    request.log.warn({ err: error }, 'Registration verification email was not sent');
+  }
 
   response.status(201).json({
     data: {
       user,
       accessToken,
+      verificationEmailSent,
     },
   });
 };
@@ -119,6 +137,31 @@ export const updateMe: RequestHandler = async (request, response) => {
   response.status(200).json({
     data: {
       user,
+    },
+  });
+};
+
+export const resendVerificationEmail: RequestHandler = async (request, response) => {
+  if (request.auth === undefined) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  const status = await requestEmailVerification(request.auth.userId);
+
+  response.status(status === 'sent' ? 202 : 200).json({
+    data: {
+      status,
+    },
+  });
+};
+
+export const confirmEmailVerification: RequestHandler = async (request, response) => {
+  const { token } = request.body as VerifyEmailInput;
+  const status = await verifyEmail(token);
+
+  response.status(200).json({
+    data: {
+      status,
     },
   });
 };

@@ -44,6 +44,9 @@ const SavedRecipesPage = lazy(async () => ({
 const UserProfilePage = lazy(async () => ({
   default: (await import('@/pages/user-profile-page')).UserProfilePage,
 }));
+const VerifyEmailPage = lazy(async () => ({
+  default: (await import('@/pages/verify-email-page')).VerifyEmailPage,
+}));
 
 function PageLoader() {
   return (
@@ -64,6 +67,7 @@ function App() {
         <Route index element={<HomePage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
+        <Route path="verify-email" element={<VerifyEmailPage />} />
         <Route path="recipes" element={<RecipesPage />} />
         <Route path="recipes/:slug" element={<RecipeDetailPage />} />
         <Route path="cooks/:username" element={<UserProfilePage />} />

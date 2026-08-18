@@ -5,20 +5,38 @@ import { AppError } from '../../src/errors/app-error.js';
 const {
   authenticateUserMock,
   createAuthSessionMock,
+  requestEmailVerificationMock,
   registerUserMock,
   revokeAuthSessionMock,
   rotateAuthSessionMock,
+  sendEmailVerificationMock,
+  verifyAccessTokenMock,
+  verifyEmailMock,
 } = vi.hoisted(() => ({
   authenticateUserMock: vi.fn(),
   createAuthSessionMock: vi.fn(),
+  requestEmailVerificationMock: vi.fn(),
   registerUserMock: vi.fn(),
   revokeAuthSessionMock: vi.fn(),
   rotateAuthSessionMock: vi.fn(),
+  sendEmailVerificationMock: vi.fn(),
+  verifyAccessTokenMock: vi.fn(),
+  verifyEmailMock: vi.fn(),
+}));
+
+vi.mock('../../src/lib/access-token.js', () => ({
+  verifyAccessToken: verifyAccessTokenMock,
 }));
 
 vi.mock('../../src/services/auth.service.js', () => ({
   authenticateUser: authenticateUserMock,
   registerUser: registerUserMock,
+}));
+
+vi.mock('../../src/services/email-verification.service.js', () => ({
+  requestEmailVerification: requestEmailVerificationMock,
+  sendEmailVerification: sendEmailVerificationMock,
+  verifyEmail: verifyEmailMock,
 }));
 
 vi.mock('../../src/services/session.service.js', () => ({
@@ -60,6 +78,7 @@ describe('POST /api/v1/auth/register', () => {
       refreshToken: 'raw-refresh-token',
       refreshTokenExpiresAt: new Date('2026-08-03T08:00:00.000Z'),
     });
+    sendEmailVerificationMock.mockResolvedValue('sent');
 
     const response = await request(app)
       .post('/api/v1/auth/register')
@@ -97,8 +116,12 @@ describe('POST /api/v1/auth/register', () => {
           createdAt: '2026-07-27T08:00:00.000Z',
         },
         accessToken: 'signed-access-token',
+        verificationEmailSent: true,
       },
     });
+    expect(sendEmailVerificationMock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'user-id', email: 'amina@example.com' }),
+    );
     expect(response.body).not.toHaveProperty('data.user.password');
     expect(response.body).not.toHaveProperty('data.user.passwordHash');
     expect(response.body).not.toHaveProperty('data.refreshToken');
@@ -124,6 +147,7 @@ describe('POST /api/v1/auth/register', () => {
 
     expect(registerUserMock).not.toHaveBeenCalled();
     expect(createAuthSessionMock).not.toHaveBeenCalled();
+    expect(sendEmailVerificationMock).not.toHaveBeenCalled();
     expect(response.body.error.code).toBe('VALIDATION_ERROR');
   });
 
@@ -148,6 +172,94 @@ describe('POST /api/v1/auth/register', () => {
       },
     });
     expect(createAuthSessionMock).not.toHaveBeenCalled();
+    expect(sendEmailVerificationMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps the account session when verification email delivery fails', async () => {
+    registerUserMock.mockResolvedValue({
+      id: 'user-id',
+      name: 'Amina Rahman',
+      username: 'amina_kitchen',
+      email: 'amina@example.com',
+      avatarUrl: null,
+      bio: null,
+      role: 'user',
+      isEmailVerified: false,
+      createdAt: new Date('2026-07-27T08:00:00.000Z'),
+    });
+    createAuthSessionMock.mockResolvedValue({
+      accessToken: 'signed-access-token',
+      refreshToken: 'raw-refresh-token',
+      refreshTokenExpiresAt: new Date('2026-08-03T08:00:00.000Z'),
+    });
+    sendEmailVerificationMock.mockRejectedValue(new Error('Provider unavailable'));
+
+    const response = await request(app)
+      .post('/api/v1/auth/register')
+      .send(registrationBody)
+      .expect(201);
+
+    expect(response.body.data.verificationEmailSent).toBe(false);
+    expect(response.body.data.accessToken).toBe('signed-access-token');
+  });
+});
+
+describe('POST /api/v1/auth/email-verification/verify', () => {
+  const app = createApp();
+  const token = 'a'.repeat(43);
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('verifies a valid email token without requiring a session', async () => {
+    verifyEmailMock.mockResolvedValue('verified');
+
+    const response = await request(app)
+      .post('/api/v1/auth/email-verification/verify')
+      .send({ token })
+      .expect(200);
+
+    expect(verifyEmailMock).toHaveBeenCalledWith(token);
+    expect(response.body).toEqual({ data: { status: 'verified' } });
+  });
+
+  it('rejects malformed tokens before calling the service', async () => {
+    const response = await request(app)
+      .post('/api/v1/auth/email-verification/verify')
+      .send({ token: 'invalid' })
+      .expect(400);
+
+    expect(verifyEmailMock).not.toHaveBeenCalled();
+    expect(response.body.error.code).toBe('VALIDATION_ERROR');
+  });
+});
+
+describe('POST /api/v1/auth/email-verification/resend', () => {
+  const app = createApp();
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('requests a new verification email for the authenticated account', async () => {
+    verifyAccessTokenMock.mockResolvedValue({ userId: 'user-id', role: 'user' });
+    requestEmailVerificationMock.mockResolvedValue('sent');
+
+    const response = await request(app)
+      .post('/api/v1/auth/email-verification/resend')
+      .set('Authorization', 'Bearer signed-access-token')
+      .expect(202);
+
+    expect(requestEmailVerificationMock).toHaveBeenCalledWith('user-id');
+    expect(response.body).toEqual({ data: { status: 'sent' } });
+  });
+
+  it('does not reveal account information without authentication', async () => {
+    const response = await request(app).post('/api/v1/auth/email-verification/resend').expect(401);
+
+    expect(requestEmailVerificationMock).not.toHaveBeenCalled();
+    expect(response.body.error.code).toBe('UNAUTHORIZED');
   });
 });
 

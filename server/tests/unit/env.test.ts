@@ -14,6 +14,8 @@ describe('environment configuration', () => {
       ACCESS_TOKEN_SECRET: 'development-only-access-token-secret',
       ACCESS_TOKEN_TTL_MINUTES: 15,
       REFRESH_TOKEN_TTL_DAYS: 7,
+      EMAIL_VERIFICATION_TOKEN_TTL_HOURS: 24,
+      EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS: 60,
     });
   });
 
@@ -56,6 +58,22 @@ describe('environment configuration', () => {
       CLOUDINARY_CLOUD_NAME: 'claypot',
       CLOUDINARY_API_KEY: 'api-key',
       CLOUDINARY_API_SECRET: 'api-secret',
+    });
+  });
+
+  it('requires the Resend key and sender to be configured together', () => {
+    expect(() => loadEnv({ RESEND_API_KEY: 're_test_key' })).toThrow(
+      'Resend API key and email sender must be configured together',
+    );
+
+    expect(
+      loadEnv({
+        RESEND_API_KEY: 're_test_key',
+        EMAIL_FROM: 'Claypot <onboarding@resend.dev>',
+      }),
+    ).toMatchObject({
+      RESEND_API_KEY: 're_test_key',
+      EMAIL_FROM: 'Claypot <onboarding@resend.dev>',
     });
   });
 });
