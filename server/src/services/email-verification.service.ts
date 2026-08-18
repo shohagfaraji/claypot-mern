@@ -69,7 +69,7 @@ export async function sendEmailVerification(
           createdAt: now,
         },
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
     );
   } catch (error) {
     if (isDuplicateKeyError(error)) {

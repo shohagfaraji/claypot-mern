@@ -93,7 +93,7 @@ describe('session rotation', () => {
           ipAddress: '127.0.0.1',
         },
       },
-      { new: true },
+      { returnDocument: 'after' },
     );
     expect(session).toEqual({
       accessToken: 'new-access-token',
