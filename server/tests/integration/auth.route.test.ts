@@ -6,22 +6,26 @@ const {
   authenticateUserMock,
   createAuthSessionMock,
   requestEmailVerificationMock,
+  requestPasswordResetMock,
   registerUserMock,
   revokeAuthSessionMock,
   rotateAuthSessionMock,
   sendEmailVerificationMock,
   verifyAccessTokenMock,
   verifyEmailMock,
+  resetPasswordMock,
 } = vi.hoisted(() => ({
   authenticateUserMock: vi.fn(),
   createAuthSessionMock: vi.fn(),
   requestEmailVerificationMock: vi.fn(),
+  requestPasswordResetMock: vi.fn(),
   registerUserMock: vi.fn(),
   revokeAuthSessionMock: vi.fn(),
   rotateAuthSessionMock: vi.fn(),
   sendEmailVerificationMock: vi.fn(),
   verifyAccessTokenMock: vi.fn(),
   verifyEmailMock: vi.fn(),
+  resetPasswordMock: vi.fn(),
 }));
 
 vi.mock('../../src/lib/access-token.js', () => ({
@@ -39,6 +43,11 @@ vi.mock('../../src/services/email-verification.service.js', () => ({
   verifyEmail: verifyEmailMock,
 }));
 
+vi.mock('../../src/services/password-recovery.service.js', () => ({
+  requestPasswordReset: requestPasswordResetMock,
+  resetPassword: resetPasswordMock,
+}));
+
 vi.mock('../../src/services/session.service.js', () => ({
   createAuthSession: createAuthSessionMock,
   revokeAuthSession: revokeAuthSessionMock,
@@ -53,6 +62,41 @@ const registrationBody = {
   email: '  AMINA@EXAMPLE.COM  ',
   password: 'Claypot9',
 };
+
+describe('password recovery routes', () => {
+  const app = createApp();
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it.each(['/api/v1/auth/password-recovery/request', '/api/v1/auth/password-recovery/resend'])(
+    'returns the same response from %s',
+    async (path) => {
+      const response = await request(app)
+        .post(path)
+        .send({ email: '  AMINA@EXAMPLE.COM  ' })
+        .expect(202);
+
+      expect(requestPasswordResetMock).toHaveBeenCalledWith('amina@example.com');
+      expect(response.body).toEqual({
+        data: {
+          message: 'If an account matches that email, a password reset link will be sent.',
+        },
+      });
+    },
+  );
+
+  it('resets a password with a valid input', async () => {
+    const response = await request(app)
+      .post('/api/v1/auth/password-recovery/reset')
+      .send({ token: 'a'.repeat(43), password: 'NewClaypot9' })
+      .expect(200);
+
+    expect(resetPasswordMock).toHaveBeenCalledWith('a'.repeat(43), 'NewClaypot9');
+    expect(response.body.data.message).toContain('Sign in');
+  });
+});
 
 describe('POST /api/v1/auth/register', () => {
   const app = createApp();

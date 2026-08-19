@@ -36,6 +36,13 @@ const envSchema = z
       .positive()
       .max(3_600)
       .default(60),
+    PASSWORD_RESET_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().max(1440).default(30),
+    PASSWORD_RESET_RESEND_COOLDOWN_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(3_600)
+      .default(60),
     CLOUDINARY_CLOUD_NAME: z.string().trim().min(1).optional(),
     CLOUDINARY_API_KEY: z.string().trim().min(1).optional(),
     CLOUDINARY_API_SECRET: z.string().trim().min(1).optional(),
