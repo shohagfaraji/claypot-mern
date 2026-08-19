@@ -8,6 +8,8 @@ import {
 import type {
   LoginInput,
   RegisterInput,
+  RequestPasswordResetInput,
+  ResetPasswordInput,
   UpdateProfileInput,
   VerifyEmailInput,
 } from '../schemas/auth.schema.js';
@@ -23,6 +25,7 @@ import {
   sendEmailVerification,
   verifyEmail,
 } from '../services/email-verification.service.js';
+import { requestPasswordReset, resetPassword } from '../services/password-recovery.service.js';
 import {
   createAuthSession,
   revokeAuthSession,
@@ -162,6 +165,29 @@ export const confirmEmailVerification: RequestHandler = async (request, response
   response.status(200).json({
     data: {
       status,
+    },
+  });
+};
+
+export const requestPasswordRecovery: RequestHandler = async (request, response) => {
+  const { email } = request.body as RequestPasswordResetInput;
+
+  await requestPasswordReset(email);
+  response.status(202).json({
+    data: {
+      message: 'If an account matches that email, a password reset link will be sent.',
+    },
+  });
+};
+
+export const confirmPasswordReset: RequestHandler = async (request, response) => {
+  const { token, password } = request.body as ResetPasswordInput;
+
+  await resetPassword(token, password);
+  response.clearCookie(refreshTokenCookieName, getClearRefreshTokenCookieOptions());
+  response.status(200).json({
+    data: {
+      message: 'Your password has been reset. Sign in with your new password.',
     },
   });
 };

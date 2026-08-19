@@ -28,6 +28,15 @@ export interface LoginInput {
   password: string;
 }
 
+export interface PasswordResetRequestInput {
+  email: string;
+}
+
+export interface ResetPasswordInput {
+  token: string;
+  password: string;
+}
+
 export interface RegisterInput {
   name: string;
   username: string;

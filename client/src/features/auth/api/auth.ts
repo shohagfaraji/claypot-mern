@@ -4,8 +4,10 @@ import type {
   EmailVerificationRequestStatus,
   EmailVerificationStatus,
   LoginInput,
+  PasswordResetRequestInput,
   RegisterInput,
   RegistrationSession,
+  ResetPasswordInput,
   UpdateProfileInput,
 } from '@/features/auth/types';
 import { apiRequest } from '@/lib/api-client';
@@ -42,6 +44,10 @@ interface EmailVerificationResponse {
   };
 }
 
+interface PasswordRecoveryResponse {
+  data: { message: string };
+}
+
 const verificationRequests = new Map<string, Promise<EmailVerificationStatus>>();
 
 export async function login(input: LoginInput) {
@@ -62,6 +68,33 @@ export async function register(input: RegisterInput) {
   });
 
   return response.data;
+}
+
+export async function requestPasswordReset(input: PasswordResetRequestInput) {
+  const response = await apiRequest<PasswordRecoveryResponse>('/auth/password-recovery/request', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  return response.data.message;
+}
+
+export async function resendPasswordReset(input: PasswordResetRequestInput) {
+  const response = await apiRequest<PasswordRecoveryResponse>('/auth/password-recovery/resend', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  return response.data.message;
+}
+
+export async function resetPassword(input: ResetPasswordInput) {
+  const response = await apiRequest<PasswordRecoveryResponse>('/auth/password-recovery/reset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  return response.data.message;
 }
 
 export async function refreshAccessToken() {

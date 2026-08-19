@@ -23,6 +23,9 @@ const CreateRecipePage = lazy(async () => ({
 }));
 const HomePage = lazy(async () => ({ default: (await import('@/pages/home-page')).HomePage }));
 const LoginPage = lazy(async () => ({ default: (await import('@/pages/login-page')).LoginPage }));
+const ForgotPasswordPage = lazy(async () => ({
+  default: (await import('@/pages/forgot-password-page')).ForgotPasswordPage,
+}));
 const MyRecipesPage = lazy(async () => ({
   default: (await import('@/pages/my-recipes-page')).MyRecipesPage,
 }));
@@ -37,6 +40,9 @@ const RecipesPage = lazy(async () => ({
 }));
 const RegisterPage = lazy(async () => ({
   default: (await import('@/pages/register-page')).RegisterPage,
+}));
+const ResetPasswordPage = lazy(async () => ({
+  default: (await import('@/pages/reset-password-page')).ResetPasswordPage,
 }));
 const SavedRecipesPage = lazy(async () => ({
   default: (await import('@/pages/saved-recipes-page')).SavedRecipesPage,
@@ -66,6 +72,8 @@ function App() {
       <Routes>
         <Route index element={<HomePage />} />
         <Route path="login" element={<LoginPage />} />
+        <Route path="forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="reset-password" element={<ResetPasswordPage />} />
         <Route path="register" element={<RegisterPage />} />
         <Route path="verify-email" element={<VerifyEmailPage />} />
         <Route path="recipes" element={<RecipesPage />} />
