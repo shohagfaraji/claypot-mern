@@ -6,13 +6,16 @@ import {
   refreshTokenCookieName,
 } from '../lib/refresh-token.js';
 import type {
+  ChangePasswordInput,
   LoginInput,
   RegisterInput,
   RequestPasswordResetInput,
   ResetPasswordInput,
+  SessionIdParams,
   UpdateProfileInput,
   VerifyEmailInput,
 } from '../schemas/auth.schema.js';
+import { changeAccountPassword } from '../services/account-security.service.js';
 import {
   authenticateUser,
   getCurrentUser,
@@ -28,9 +31,22 @@ import {
 import { requestPasswordReset, resetPassword } from '../services/password-recovery.service.js';
 import {
   createAuthSession,
+  listUserAuthSessions,
   revokeAuthSession,
+  revokeOtherUserAuthSessions,
+  revokeUserAuthSession,
   rotateAuthSession,
 } from '../services/session.service.js';
+
+function requireRefreshToken(request: Request): string {
+  const refreshToken = request.cookies[refreshTokenCookieName] as unknown;
+
+  if (typeof refreshToken !== 'string' || refreshToken.length === 0) {
+    throw new AppError(401, 'INVALID_SESSION', 'Refresh session is invalid or expired.');
+  }
+
+  return refreshToken;
+}
 
 async function startSession(request: Request, response: Response, user: PublicUser) {
   const userAgent = request.get('user-agent');
@@ -84,11 +100,7 @@ export const login: RequestHandler = async (request, response) => {
 };
 
 export const refresh: RequestHandler = async (request, response) => {
-  const currentRefreshToken = request.cookies[refreshTokenCookieName] as unknown;
-
-  if (typeof currentRefreshToken !== 'string' || currentRefreshToken.length === 0) {
-    throw new AppError(401, 'INVALID_SESSION', 'Refresh session is invalid or expired.');
-  }
+  const currentRefreshToken = requireRefreshToken(request);
 
   const userAgent = request.get('user-agent');
   const ipAddress = request.ip;
@@ -188,6 +200,63 @@ export const confirmPasswordReset: RequestHandler = async (request, response) =>
   response.status(200).json({
     data: {
       message: 'Your password has been reset. Sign in with your new password.',
+    },
+  });
+};
+
+export const listSessions: RequestHandler = async (request, response) => {
+  if (request.auth === undefined) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  const sessions = await listUserAuthSessions(request.auth.userId, requireRefreshToken(request));
+  response.status(200).json({ data: { sessions } });
+};
+
+export const revokeSession: RequestHandler = async (request, response) => {
+  if (request.auth === undefined) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  const { sessionId } = request.validatedParams as SessionIdParams;
+  await revokeUserAuthSession(request.auth.userId, sessionId, requireRefreshToken(request));
+  response.status(204).send();
+};
+
+export const revokeOtherSessions: RequestHandler = async (request, response) => {
+  if (request.auth === undefined) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  const revokedCount = await revokeOtherUserAuthSessions(
+    request.auth.userId,
+    requireRefreshToken(request),
+  );
+  response.status(200).json({ data: { revokedCount } });
+};
+
+export const changePassword: RequestHandler = async (request, response) => {
+  if (request.auth === undefined) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  const currentRefreshToken = requireRefreshToken(request);
+  const userAgent = request.get('user-agent');
+  const ipAddress = request.ip;
+  const session = await changeAccountPassword(
+    request.auth.userId,
+    currentRefreshToken,
+    request.body as ChangePasswordInput,
+    {
+      ...(ipAddress === undefined ? {} : { ipAddress }),
+      ...(userAgent === undefined ? {} : { userAgent }),
+    },
+  );
+
+  response.cookie(refreshTokenCookieName, session.refreshToken, getRefreshTokenCookieOptions());
+  response.status(200).json({
+    data: {
+      message: 'Your password has been updated and other sessions have been signed out.',
     },
   });
 };

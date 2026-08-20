@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  changePasswordInputSchema,
   loginInputSchema,
   registerInputSchema,
+  sessionIdParamsSchema,
   updateProfileInputSchema,
   verifyEmailInputSchema,
 } from '../../src/schemas/auth.schema.js';
@@ -111,6 +113,44 @@ describe('login input schema', () => {
         }),
       ]),
     );
+  });
+});
+
+describe('account security schemas', () => {
+  it('accepts a strong password change', () => {
+    expect(
+      changePasswordInputSchema.parse({
+        currentPassword: 'Claypot9',
+        newPassword: 'NewClaypot9',
+      }),
+    ).toEqual({ currentPassword: 'Claypot9', newPassword: 'NewClaypot9' });
+  });
+
+  it('rejects reused, weak, and unexpected password values', () => {
+    expect(
+      changePasswordInputSchema.safeParse({
+        currentPassword: 'Claypot9',
+        newPassword: 'Claypot9',
+      }).success,
+    ).toBe(false);
+    expect(
+      changePasswordInputSchema.safeParse({ currentPassword: 'Claypot9', newPassword: 'weak' })
+        .success,
+    ).toBe(false);
+    expect(
+      changePasswordInputSchema.safeParse({
+        currentPassword: 'Claypot9',
+        newPassword: 'NewClaypot9',
+        role: 'admin',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts only MongoDB session identifiers', () => {
+    expect(sessionIdParamsSchema.parse({ sessionId: '507f1f77bcf86cd799439011' })).toEqual({
+      sessionId: '507f1f77bcf86cd799439011',
+    });
+    expect(sessionIdParamsSchema.safeParse({ sessionId: 'invalid' }).success).toBe(false);
   });
 });
 

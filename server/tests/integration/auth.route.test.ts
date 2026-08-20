@@ -4,11 +4,15 @@ import { AppError } from '../../src/errors/app-error.js';
 
 const {
   authenticateUserMock,
+  changeAccountPasswordMock,
   createAuthSessionMock,
   requestEmailVerificationMock,
   requestPasswordResetMock,
+  listUserAuthSessionsMock,
   registerUserMock,
   revokeAuthSessionMock,
+  revokeOtherUserAuthSessionsMock,
+  revokeUserAuthSessionMock,
   rotateAuthSessionMock,
   sendEmailVerificationMock,
   verifyAccessTokenMock,
@@ -16,11 +20,15 @@ const {
   resetPasswordMock,
 } = vi.hoisted(() => ({
   authenticateUserMock: vi.fn(),
+  changeAccountPasswordMock: vi.fn(),
   createAuthSessionMock: vi.fn(),
   requestEmailVerificationMock: vi.fn(),
   requestPasswordResetMock: vi.fn(),
+  listUserAuthSessionsMock: vi.fn(),
   registerUserMock: vi.fn(),
   revokeAuthSessionMock: vi.fn(),
+  revokeOtherUserAuthSessionsMock: vi.fn(),
+  revokeUserAuthSessionMock: vi.fn(),
   rotateAuthSessionMock: vi.fn(),
   sendEmailVerificationMock: vi.fn(),
   verifyAccessTokenMock: vi.fn(),
@@ -48,9 +56,16 @@ vi.mock('../../src/services/password-recovery.service.js', () => ({
   resetPassword: resetPasswordMock,
 }));
 
+vi.mock('../../src/services/account-security.service.js', () => ({
+  changeAccountPassword: changeAccountPasswordMock,
+}));
+
 vi.mock('../../src/services/session.service.js', () => ({
   createAuthSession: createAuthSessionMock,
+  listUserAuthSessions: listUserAuthSessionsMock,
   revokeAuthSession: revokeAuthSessionMock,
+  revokeOtherUserAuthSessions: revokeOtherUserAuthSessionsMock,
+  revokeUserAuthSession: revokeUserAuthSessionMock,
   rotateAuthSession: rotateAuthSessionMock,
 }));
 
@@ -62,6 +77,109 @@ const registrationBody = {
   email: '  AMINA@EXAMPLE.COM  ',
   password: 'Claypot9',
 };
+
+describe('account security routes', () => {
+  const app = createApp();
+  const authorization = 'Bearer signed-access-token';
+  const refreshCookie = 'claypot_refresh=current-refresh-token';
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    verifyAccessTokenMock.mockResolvedValue({ userId: 'user-id', role: 'user' });
+  });
+
+  it('lists active sessions and identifies the current one', async () => {
+    listUserAuthSessionsMock.mockResolvedValue([
+      {
+        id: '507f1f77bcf86cd799439011',
+        device: 'Chrome on Linux',
+        ipAddress: '127.0.0.1',
+        createdAt: new Date('2026-08-10T08:00:00.000Z'),
+        lastActiveAt: new Date('2026-08-19T08:00:00.000Z'),
+        expiresAt: new Date('2026-08-26T08:00:00.000Z'),
+        isCurrent: true,
+      },
+    ]);
+
+    const response = await request(app)
+      .get('/api/v1/auth/sessions')
+      .set('Authorization', authorization)
+      .set('Cookie', refreshCookie)
+      .expect(200);
+
+    expect(listUserAuthSessionsMock).toHaveBeenCalledWith('user-id', 'current-refresh-token');
+    expect(response.body.data.sessions[0]).toMatchObject({
+      device: 'Chrome on Linux',
+      isCurrent: true,
+    });
+  });
+
+  it('revokes another active session', async () => {
+    const sessionId = '507f1f77bcf86cd799439011';
+
+    await request(app)
+      .delete(`/api/v1/auth/sessions/${sessionId}`)
+      .set('Authorization', authorization)
+      .set('Cookie', refreshCookie)
+      .expect(204);
+
+    expect(revokeUserAuthSessionMock).toHaveBeenCalledWith(
+      'user-id',
+      sessionId,
+      'current-refresh-token',
+    );
+  });
+
+  it('revokes all sessions except the current one', async () => {
+    revokeOtherUserAuthSessionsMock.mockResolvedValue(2);
+
+    const response = await request(app)
+      .delete('/api/v1/auth/sessions')
+      .set('Authorization', authorization)
+      .set('Cookie', refreshCookie)
+      .expect(200);
+
+    expect(revokeOtherUserAuthSessionsMock).toHaveBeenCalledWith(
+      'user-id',
+      'current-refresh-token',
+    );
+    expect(response.body).toEqual({ data: { revokedCount: 2 } });
+  });
+
+  it('changes the password and replaces the refresh cookie', async () => {
+    changeAccountPasswordMock.mockResolvedValue({
+      refreshToken: 'replacement-refresh-token',
+      refreshTokenExpiresAt: new Date('2026-08-26T08:00:00.000Z'),
+    });
+
+    const response = await request(app)
+      .patch('/api/v1/auth/password')
+      .set('Authorization', authorization)
+      .set('Cookie', refreshCookie)
+      .set('User-Agent', 'Claypot test browser')
+      .send({ currentPassword: 'Claypot9', newPassword: 'NewClaypot9' })
+      .expect(200);
+
+    expect(changeAccountPasswordMock).toHaveBeenCalledWith(
+      'user-id',
+      'current-refresh-token',
+      { currentPassword: 'Claypot9', newPassword: 'NewClaypot9' },
+      { userAgent: 'Claypot test browser', ipAddress: expect.any(String) },
+    );
+    expect(response.headers['set-cookie']).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('claypot_refresh=replacement-refresh-token'),
+      ]),
+    );
+  });
+
+  it('requires authentication and a current refresh session', async () => {
+    await request(app).get('/api/v1/auth/sessions').set('Cookie', refreshCookie).expect(401);
+    await request(app).get('/api/v1/auth/sessions').set('Authorization', authorization).expect(401);
+
+    expect(listUserAuthSessionsMock).not.toHaveBeenCalled();
+  });
+});
 
 describe('password recovery routes', () => {
   const app = createApp();

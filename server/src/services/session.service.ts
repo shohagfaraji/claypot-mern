@@ -2,6 +2,7 @@ import { env } from '../config/env.js';
 import { AppError } from '../errors/app-error.js';
 import { createAccessToken, type AccessTokenIdentity } from '../lib/access-token.js';
 import { createRefreshToken, hashRefreshToken } from '../lib/refresh-token.js';
+import { describeUserAgent } from '../lib/user-agent.js';
 import { RefreshSessionModel } from '../models/refresh-session.model.js';
 import { UserModel } from '../models/user.model.js';
 
@@ -16,6 +17,16 @@ export interface AuthSession {
   accessToken: string;
   refreshToken: string;
   refreshTokenExpiresAt: Date;
+}
+
+export interface AccountSession {
+  id: string;
+  device: string;
+  ipAddress: string | null;
+  createdAt: Date;
+  lastActiveAt: Date;
+  expiresAt: Date;
+  isCurrent: boolean;
 }
 
 export async function createAuthSession(
@@ -119,4 +130,85 @@ export async function revokeAuthSession(refreshToken: string): Promise<void> {
       },
     },
   );
+}
+
+export async function listUserAuthSessions(
+  userId: string,
+  currentRefreshToken: string,
+): Promise<AccountSession[]> {
+  const now = new Date();
+  const currentTokenHash = hashRefreshToken(currentRefreshToken);
+  const sessions = await RefreshSessionModel.find({
+    user: userId,
+    revokedAt: null,
+    expiresAt: { $gt: now },
+  })
+    .select('+tokenHash')
+    .sort({ lastUsedAt: -1, createdAt: -1 });
+
+  if (!sessions.some((session) => session.tokenHash === currentTokenHash)) {
+    throw new AppError(401, 'INVALID_SESSION', 'Refresh session is invalid or expired.');
+  }
+
+  return sessions.map((session) => ({
+    id: session.id,
+    device: describeUserAgent(session.userAgent),
+    ipAddress: session.ipAddress,
+    createdAt: session.createdAt,
+    lastActiveAt: session.lastUsedAt ?? session.createdAt,
+    expiresAt: session.expiresAt,
+    isCurrent: session.tokenHash === currentTokenHash,
+  }));
+}
+
+export async function revokeUserAuthSession(
+  userId: string,
+  sessionId: string,
+  currentRefreshToken: string,
+): Promise<void> {
+  const currentTokenHash = hashRefreshToken(currentRefreshToken);
+  const revokedSession = await RefreshSessionModel.findOneAndUpdate(
+    {
+      _id: sessionId,
+      user: userId,
+      tokenHash: { $ne: currentTokenHash },
+      revokedAt: null,
+      expiresAt: { $gt: new Date() },
+    },
+    { $set: { revokedAt: new Date() } },
+  );
+
+  if (revokedSession === null) {
+    throw new AppError(404, 'SESSION_NOT_FOUND', 'This active session could not be found.');
+  }
+}
+
+export async function revokeOtherUserAuthSessions(
+  userId: string,
+  currentRefreshToken: string,
+): Promise<number> {
+  const now = new Date();
+  const currentTokenHash = hashRefreshToken(currentRefreshToken);
+  const currentSession = await RefreshSessionModel.findOne({
+    user: userId,
+    tokenHash: currentTokenHash,
+    revokedAt: null,
+    expiresAt: { $gt: now },
+  });
+
+  if (currentSession === null) {
+    throw new AppError(401, 'INVALID_SESSION', 'Refresh session is invalid or expired.');
+  }
+
+  const result = await RefreshSessionModel.updateMany(
+    {
+      user: userId,
+      _id: { $ne: currentSession._id },
+      revokedAt: null,
+      expiresAt: { $gt: now },
+    },
+    { $set: { revokedAt: now } },
+  );
+
+  return result.modifiedCount;
 }

@@ -37,6 +37,21 @@ export interface ResetPasswordInput {
   password: string;
 }
 
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface AccountSession {
+  id: string;
+  device: string;
+  ipAddress: string | null;
+  createdAt: string;
+  lastActiveAt: string;
+  expiresAt: string;
+  isCurrent: boolean;
+}
+
 export interface RegisterInput {
   name: string;
   username: string;
