@@ -1,6 +1,8 @@
 import type {
   AuthSession,
   AuthUser,
+  AccountSession,
+  ChangePasswordInput,
   EmailVerificationRequestStatus,
   EmailVerificationStatus,
   LoginInput,
@@ -47,6 +49,16 @@ interface EmailVerificationResponse {
 interface PasswordRecoveryResponse {
   data: { message: string };
 }
+
+interface AccountSessionsResponse {
+  data: { sessions: AccountSession[] };
+}
+
+interface RevokedSessionsResponse {
+  data: { revokedCount: number };
+}
+
+type AuthenticatedRequest = <T>(path: string, init?: RequestInit) => Promise<T>;
 
 const verificationRequests = new Map<string, Promise<EmailVerificationStatus>>();
 
@@ -128,22 +140,46 @@ export async function updateProfile(
   return response.data.user;
 }
 
-export async function getAuthenticatedCurrentUser(
-  request: <T>(path: string, init?: RequestInit) => Promise<T>,
-) {
+export async function getAuthenticatedCurrentUser(request: AuthenticatedRequest) {
   const response = await request<CurrentUserResponse>('/auth/me');
   return response.data.user;
 }
 
-export async function resendVerificationEmail(
-  request: <T>(path: string, init?: RequestInit) => Promise<T>,
-) {
+export async function resendVerificationEmail(request: AuthenticatedRequest) {
   const response = await request<EmailVerificationRequestResponse>(
     '/auth/email-verification/resend',
     { method: 'POST' },
   );
 
   return response.data.status;
+}
+
+export async function getAccountSessions(request: AuthenticatedRequest) {
+  const response = await request<AccountSessionsResponse>('/auth/sessions');
+  return response.data.sessions;
+}
+
+export async function revokeAccountSession(request: AuthenticatedRequest, sessionId: string) {
+  await request<void>(`/auth/sessions/${sessionId}`, { method: 'DELETE' });
+}
+
+export async function revokeOtherAccountSessions(request: AuthenticatedRequest) {
+  const response = await request<RevokedSessionsResponse>('/auth/sessions', {
+    method: 'DELETE',
+  });
+  return response.data.revokedCount;
+}
+
+export async function changeAccountPassword(
+  request: AuthenticatedRequest,
+  input: ChangePasswordInput,
+) {
+  const response = await request<PasswordRecoveryResponse>('/auth/password', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  return response.data.message;
 }
 
 export function verifyEmailAddress(token: string) {

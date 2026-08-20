@@ -84,6 +84,26 @@ export const resetPasswordInputSchema = z.strictObject({
   password: passwordSchema,
 });
 
+export const changePasswordInputSchema = z
+  .strictObject({
+    currentPassword: z
+      .string()
+      .min(1, 'Current password is required.')
+      .max(72, 'Current password cannot exceed 72 characters.')
+      .refine((password) => Buffer.byteLength(password, 'utf8') <= 72, {
+        message: 'Current password cannot exceed 72 bytes.',
+      }),
+    newPassword: passwordSchema,
+  })
+  .refine((input) => input.currentPassword !== input.newPassword, {
+    path: ['newPassword'],
+    message: 'New password must be different from the current password.',
+  });
+
+export const sessionIdParamsSchema = z.strictObject({
+  sessionId: z.string().regex(/^[a-f0-9]{24}$/i, 'Session ID is invalid.'),
+});
+
 export const updateProfileInputSchema = z
   .strictObject({
     name: z
@@ -127,4 +147,6 @@ export type LoginInput = z.infer<typeof loginInputSchema>;
 export type VerifyEmailInput = z.infer<typeof verifyEmailInputSchema>;
 export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetInputSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordInputSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordInputSchema>;
+export type SessionIdParams = z.infer<typeof sessionIdParamsSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileInputSchema>;
