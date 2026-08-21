@@ -10,6 +10,10 @@ import { AuthPageLayout } from '@/features/auth/components/auth-page-layout';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { getAuthRedirectPath } from '@/features/auth/lib/get-auth-redirect-path';
 
+interface LoginLocationState {
+  accountDeleted?: boolean;
+}
+
 export function LoginPage() {
   const { status, signIn } = useAuth();
   const location = useLocation();
@@ -18,6 +22,7 @@ export function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const redirectPath = getAuthRedirectPath(location.state);
+  const accountDeleted = (location.state as LoginLocationState | null)?.accountDeleted === true;
 
   if (status === 'authenticated') {
     return <Navigate to={redirectPath} replace />;
@@ -61,6 +66,15 @@ export function LoginPage() {
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             Use your email address or username to access your account.
           </p>
+
+          {accountDeleted && (
+            <div
+              className="mt-5 rounded-xl border border-primary/20 bg-secondary/55 px-4 py-3 text-sm"
+              role="status"
+            >
+              Your account and associated data have been permanently deleted.
+            </div>
+          )}
 
           <form className="mt-7 space-y-5" onSubmit={handleSubmit}>
             <div className="space-y-2">

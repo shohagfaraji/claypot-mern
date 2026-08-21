@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   changePasswordInputSchema,
   confirmEmailChangeInputSchema,
+  deleteAccountInputSchema,
   loginInputSchema,
   registerInputSchema,
   requestEmailChangeInputSchema,
@@ -153,6 +154,28 @@ describe('account security schemas', () => {
       sessionId: '507f1f77bcf86cd799439011',
     });
     expect(sessionIdParamsSchema.safeParse({ sessionId: 'invalid' }).success).toBe(false);
+  });
+
+  it('accepts account deletion credentials and normalizes the confirmation', () => {
+    expect(
+      deleteAccountInputSchema.parse({
+        password: 'Claypot9',
+        confirmation: '  amina_kitchen  ',
+      }),
+    ).toEqual({ password: 'Claypot9', confirmation: 'amina_kitchen' });
+  });
+
+  it('rejects incomplete account deletion credentials and unexpected fields', () => {
+    expect(deleteAccountInputSchema.safeParse({ password: '', confirmation: '' }).success).toBe(
+      false,
+    );
+    expect(
+      deleteAccountInputSchema.safeParse({
+        password: 'Claypot9',
+        confirmation: 'amina_kitchen',
+        role: 'admin',
+      }).success,
+    ).toBe(false);
   });
 });
 

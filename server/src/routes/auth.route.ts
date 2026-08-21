@@ -4,6 +4,7 @@ import {
   confirmEmailChange,
   confirmPasswordReset,
   changePassword,
+  deleteMe,
   login,
   logout,
   listSessions,
@@ -25,6 +26,7 @@ import { validateBody, validateParams } from '../middleware/validate-request.js'
 import {
   changePasswordInputSchema,
   confirmEmailChangeInputSchema,
+  deleteAccountInputSchema,
   loginInputSchema,
   requestPasswordResetInputSchema,
   requestEmailChangeInputSchema,
@@ -92,3 +94,4 @@ authRouter.post(
 authRouter.post('/email-verification/resend', authenticate, resendVerificationEmail);
 authRouter.get('/me', authenticate, me);
 authRouter.patch('/me', authenticate, validateBody(updateProfileInputSchema), updateMe);
+authRouter.delete('/me', authenticate, validateBody(deleteAccountInputSchema), deleteMe);

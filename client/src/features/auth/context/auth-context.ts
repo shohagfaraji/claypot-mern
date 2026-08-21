@@ -17,6 +17,7 @@ export interface AuthContextValue {
   signIn: (input: LoginInput) => Promise<AuthSession>;
   signUp: (input: RegisterInput) => Promise<RegistrationSession>;
   signOut: () => Promise<void>;
+  clearSession: () => void;
   renewAccessToken: () => Promise<string>;
   updateSessionUser: (user: AuthUser) => void;
 }

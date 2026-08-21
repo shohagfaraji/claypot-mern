@@ -8,6 +8,7 @@ import {
 import type {
   ChangePasswordInput,
   ConfirmEmailChangeInput,
+  DeleteAccountInput,
   LoginInput,
   RegisterInput,
   RequestPasswordResetInput,
@@ -17,6 +18,7 @@ import type {
   UpdateProfileInput,
   VerifyEmailInput,
 } from '../schemas/auth.schema.js';
+import { deleteAccount as deleteCurrentAccount } from '../services/account-deletion.service.js';
 import { changeAccountPassword } from '../services/account-security.service.js';
 import {
   authenticateUser,
@@ -162,6 +164,24 @@ export const updateMe: RequestHandler = async (request, response) => {
   response.status(200).json({
     data: {
       user,
+    },
+  });
+};
+
+export const deleteMe: RequestHandler = async (request, response) => {
+  if (request.auth === undefined) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  await deleteCurrentAccount(
+    request.auth.userId,
+    requireRefreshToken(request),
+    request.body as DeleteAccountInput,
+  );
+  response.clearCookie(refreshTokenCookieName, getClearRefreshTokenCookieOptions());
+  response.status(200).json({
+    data: {
+      message: 'Your account and associated data have been deleted.',
     },
   });
 };

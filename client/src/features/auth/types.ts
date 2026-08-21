@@ -43,6 +43,11 @@ export interface ChangePasswordInput {
   newPassword: string;
 }
 
+export interface DeleteAccountInput {
+  password: string;
+  confirmation: string;
+}
+
 export interface RequestEmailChangeInput {
   email: string;
   password: string;

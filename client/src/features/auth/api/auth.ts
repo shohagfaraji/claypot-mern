@@ -4,6 +4,7 @@ import type {
   AccountSession,
   ChangePasswordInput,
   ConfirmedEmailChange,
+  DeleteAccountInput,
   EmailVerificationRequestStatus,
   EmailVerificationStatus,
   LoginInput,
@@ -150,6 +151,15 @@ export async function updateProfile(
   });
 
   return response.data.user;
+}
+
+export async function deleteAccount(request: AuthenticatedRequest, input: DeleteAccountInput) {
+  const response = await request<PasswordRecoveryResponse>('/auth/me', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  return response.data.message;
 }
 
 export async function getAuthenticatedCurrentUser(request: AuthenticatedRequest) {
