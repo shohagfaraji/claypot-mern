@@ -3,13 +3,16 @@ import type {
   AuthUser,
   AccountSession,
   ChangePasswordInput,
+  ConfirmedEmailChange,
   EmailVerificationRequestStatus,
   EmailVerificationStatus,
   LoginInput,
   PasswordResetRequestInput,
+  PendingEmailChange,
   RegisterInput,
   RegistrationSession,
   ResetPasswordInput,
+  RequestEmailChangeInput,
   UpdateProfileInput,
 } from '@/features/auth/types';
 import { apiRequest } from '@/lib/api-client';
@@ -58,9 +61,18 @@ interface RevokedSessionsResponse {
   data: { revokedCount: number };
 }
 
+interface PendingEmailChangeResponse {
+  data: { pending: PendingEmailChange | null };
+}
+
+interface ConfirmEmailChangeResponse {
+  data: ConfirmedEmailChange;
+}
+
 type AuthenticatedRequest = <T>(path: string, init?: RequestInit) => Promise<T>;
 
 const verificationRequests = new Map<string, Promise<EmailVerificationStatus>>();
+const emailChangeConfirmations = new Map<string, Promise<ConfirmedEmailChange>>();
 
 export async function login(input: LoginInput) {
   const response = await apiRequest<LoginResponse>('/auth/login', {
@@ -180,6 +192,48 @@ export async function changeAccountPassword(
     body: JSON.stringify(input),
   });
   return response.data.message;
+}
+
+export async function getPendingEmailChange(request: AuthenticatedRequest) {
+  const response = await request<PendingEmailChangeResponse>('/auth/email-change');
+  return response.data.pending;
+}
+
+export async function requestEmailChange(
+  request: AuthenticatedRequest,
+  input: RequestEmailChangeInput,
+) {
+  const response = await request<PendingEmailChangeResponse>('/auth/email-change/request', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  return response.data.pending;
+}
+
+export async function resendEmailChange(request: AuthenticatedRequest) {
+  const response = await request<PendingEmailChangeResponse>('/auth/email-change/resend', {
+    method: 'POST',
+  });
+  return response.data.pending;
+}
+
+export async function cancelEmailChange(request: AuthenticatedRequest) {
+  await request<void>('/auth/email-change', { method: 'DELETE' });
+}
+
+export function confirmEmailAddressChange(token: string) {
+  const existingRequest = emailChangeConfirmations.get(token);
+  if (existingRequest !== undefined) return existingRequest;
+
+  const request = apiRequest<ConfirmEmailChangeResponse>('/auth/email-change/confirm', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  }).then((response) => response.data);
+
+  emailChangeConfirmations.set(token, request);
+  return request;
 }
 
 export function verifyEmailAddress(token: string) {

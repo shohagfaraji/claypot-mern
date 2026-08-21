@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   confirmEmailVerification,
+  confirmEmailChange,
   confirmPasswordReset,
   changePassword,
   login,
@@ -10,8 +11,12 @@ import {
   refresh,
   register,
   requestPasswordRecovery,
+  removePendingEmailChange,
+  resendPendingEmailChange,
   revokeOtherSessions,
   revokeSession,
+  showPendingEmailChange,
+  startEmailChange,
   resendVerificationEmail,
   updateMe,
 } from '../controllers/auth.controller.js';
@@ -19,8 +24,10 @@ import { authenticate } from '../middleware/authenticate.js';
 import { validateBody, validateParams } from '../middleware/validate-request.js';
 import {
   changePasswordInputSchema,
+  confirmEmailChangeInputSchema,
   loginInputSchema,
   requestPasswordResetInputSchema,
+  requestEmailChangeInputSchema,
   registerInputSchema,
   resetPasswordInputSchema,
   sessionIdParamsSchema,
@@ -34,6 +41,20 @@ authRouter.post('/register', validateBody(registerInputSchema), register);
 authRouter.post('/login', validateBody(loginInputSchema), login);
 authRouter.post('/refresh', refresh);
 authRouter.post('/logout', logout);
+authRouter.get('/email-change', authenticate, showPendingEmailChange);
+authRouter.post(
+  '/email-change/request',
+  authenticate,
+  validateBody(requestEmailChangeInputSchema),
+  startEmailChange,
+);
+authRouter.post('/email-change/resend', authenticate, resendPendingEmailChange);
+authRouter.delete('/email-change', authenticate, removePendingEmailChange);
+authRouter.post(
+  '/email-change/confirm',
+  validateBody(confirmEmailChangeInputSchema),
+  confirmEmailChange,
+);
 authRouter.patch(
   '/password',
   authenticate,

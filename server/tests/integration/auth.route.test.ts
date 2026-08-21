@@ -4,9 +4,13 @@ import { AppError } from '../../src/errors/app-error.js';
 
 const {
   authenticateUserMock,
+  cancelEmailChangeMock,
   changeAccountPasswordMock,
+  confirmEmailChangeMock,
   createAuthSessionMock,
+  getPendingEmailChangeMock,
   requestEmailVerificationMock,
+  requestEmailChangeMock,
   requestPasswordResetMock,
   listUserAuthSessionsMock,
   registerUserMock,
@@ -14,15 +18,21 @@ const {
   revokeOtherUserAuthSessionsMock,
   revokeUserAuthSessionMock,
   rotateAuthSessionMock,
+  resendEmailChangeMock,
+  sendEmailChangedNoticeMock,
   sendEmailVerificationMock,
   verifyAccessTokenMock,
   verifyEmailMock,
   resetPasswordMock,
 } = vi.hoisted(() => ({
   authenticateUserMock: vi.fn(),
+  cancelEmailChangeMock: vi.fn(),
   changeAccountPasswordMock: vi.fn(),
+  confirmEmailChangeMock: vi.fn(),
   createAuthSessionMock: vi.fn(),
+  getPendingEmailChangeMock: vi.fn(),
   requestEmailVerificationMock: vi.fn(),
+  requestEmailChangeMock: vi.fn(),
   requestPasswordResetMock: vi.fn(),
   listUserAuthSessionsMock: vi.fn(),
   registerUserMock: vi.fn(),
@@ -30,6 +40,8 @@ const {
   revokeOtherUserAuthSessionsMock: vi.fn(),
   revokeUserAuthSessionMock: vi.fn(),
   rotateAuthSessionMock: vi.fn(),
+  resendEmailChangeMock: vi.fn(),
+  sendEmailChangedNoticeMock: vi.fn(),
   sendEmailVerificationMock: vi.fn(),
   verifyAccessTokenMock: vi.fn(),
   verifyEmailMock: vi.fn(),
@@ -60,6 +72,18 @@ vi.mock('../../src/services/account-security.service.js', () => ({
   changeAccountPassword: changeAccountPasswordMock,
 }));
 
+vi.mock('../../src/services/email-change.service.js', () => ({
+  cancelEmailChange: cancelEmailChangeMock,
+  confirmEmailChange: confirmEmailChangeMock,
+  getPendingEmailChange: getPendingEmailChangeMock,
+  requestEmailChange: requestEmailChangeMock,
+  resendEmailChange: resendEmailChangeMock,
+}));
+
+vi.mock('../../src/services/email.service.js', () => ({
+  sendEmailChangedNotice: sendEmailChangedNoticeMock,
+}));
+
 vi.mock('../../src/services/session.service.js', () => ({
   createAuthSession: createAuthSessionMock,
   listUserAuthSessions: listUserAuthSessionsMock,
@@ -77,6 +101,95 @@ const registrationBody = {
   email: '  AMINA@EXAMPLE.COM  ',
   password: 'Claypot9',
 };
+
+describe('email change routes', () => {
+  const app = createApp();
+  const authorization = 'Bearer signed-access-token';
+  const pending = {
+    email: 'new@example.com',
+    expiresAt: new Date('2026-08-22T08:00:00.000Z'),
+    canResendAt: new Date('2026-08-21T08:01:00.000Z'),
+  };
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    verifyAccessTokenMock.mockResolvedValue({ userId: 'user-id', role: 'user' });
+    sendEmailChangedNoticeMock.mockResolvedValue(undefined);
+  });
+
+  it('loads and creates a pending email change for the authenticated account', async () => {
+    getPendingEmailChangeMock.mockResolvedValue(pending);
+    requestEmailChangeMock.mockResolvedValue(pending);
+
+    const statusResponse = await request(app)
+      .get('/api/v1/auth/email-change')
+      .set('Authorization', authorization)
+      .expect(200);
+    const requestResponse = await request(app)
+      .post('/api/v1/auth/email-change/request')
+      .set('Authorization', authorization)
+      .send({ email: '  NEW@EXAMPLE.COM  ', password: 'Claypot9' })
+      .expect(202);
+
+    expect(getPendingEmailChangeMock).toHaveBeenCalledWith('user-id');
+    expect(requestEmailChangeMock).toHaveBeenCalledWith('user-id', 'new@example.com', 'Claypot9');
+    expect(statusResponse.body.data.pending.email).toBe('new@example.com');
+    expect(requestResponse.body.data.pending.email).toBe('new@example.com');
+  });
+
+  it('resends and cancels a pending email change', async () => {
+    resendEmailChangeMock.mockResolvedValue(pending);
+
+    await request(app)
+      .post('/api/v1/auth/email-change/resend')
+      .set('Authorization', authorization)
+      .expect(202);
+    await request(app)
+      .delete('/api/v1/auth/email-change')
+      .set('Authorization', authorization)
+      .expect(204);
+
+    expect(resendEmailChangeMock).toHaveBeenCalledWith('user-id');
+    expect(cancelEmailChangeMock).toHaveBeenCalledWith('user-id');
+  });
+
+  it('confirms a change publicly and notifies the previous address', async () => {
+    confirmEmailChangeMock.mockResolvedValue({
+      status: 'changed',
+      currentSessionPreserved: false,
+      previousEmail: 'old@example.com',
+      recipientName: 'Amina Rahman',
+    });
+
+    const response = await request(app)
+      .post('/api/v1/auth/email-change/confirm')
+      .send({ token: 'a'.repeat(43) })
+      .expect(200);
+
+    expect(confirmEmailChangeMock).toHaveBeenCalledWith('a'.repeat(43), undefined);
+    expect(sendEmailChangedNoticeMock).toHaveBeenCalledWith({
+      recipientName: 'Amina Rahman',
+      recipientEmail: 'old@example.com',
+    });
+    expect(response.body).toEqual({
+      data: { status: 'changed', currentSessionPreserved: false },
+    });
+    expect(response.headers['set-cookie']).toEqual(
+      expect.arrayContaining([expect.stringContaining('claypot_refresh=;')]),
+    );
+  });
+
+  it('requires authentication for email change management', async () => {
+    await request(app).get('/api/v1/auth/email-change').expect(401);
+    await request(app)
+      .post('/api/v1/auth/email-change/request')
+      .send({ email: 'new@example.com', password: 'Claypot9' })
+      .expect(401);
+
+    expect(getPendingEmailChangeMock).not.toHaveBeenCalled();
+    expect(requestEmailChangeMock).not.toHaveBeenCalled();
+  });
+});
 
 describe('account security routes', () => {
   const app = createApp();

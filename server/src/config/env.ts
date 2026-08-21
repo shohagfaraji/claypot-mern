@@ -36,6 +36,8 @@ const envSchema = z
       .positive()
       .max(3_600)
       .default(60),
+    EMAIL_CHANGE_TOKEN_TTL_HOURS: z.coerce.number().int().positive().max(168).default(24),
+    EMAIL_CHANGE_RESEND_COOLDOWN_SECONDS: z.coerce.number().int().positive().max(3_600).default(60),
     PASSWORD_RESET_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().max(1440).default(30),
     PASSWORD_RESET_RESEND_COOLDOWN_SECONDS: z.coerce
       .number()

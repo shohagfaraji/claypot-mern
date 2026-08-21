@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { resendVerificationEmail, updateProfile } from '@/features/auth/api/auth';
 import { AccountSecurity } from '@/features/auth/components/account-security';
+import { AccountEmailChange } from '@/features/auth/components/account-email-change';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useAuthenticatedRequest } from '@/features/auth/hooks/use-authenticated-request';
 import { ImageUploadField } from '@/features/media/components/image-upload-field';
@@ -302,6 +303,8 @@ export function AccountPage() {
       </section>
 
       <AccountSecurity />
+
+      <AccountEmailChange />
 
       <section className="mx-auto w-full max-w-7xl px-5 pb-12 sm:px-8 lg:px-10">
         <Card className="border-border/70 shadow-sm">

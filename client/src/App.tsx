@@ -21,6 +21,9 @@ const AccountPage = lazy(async () => ({
 const CreateRecipePage = lazy(async () => ({
   default: (await import('@/pages/create-recipe-page')).CreateRecipePage,
 }));
+const ConfirmEmailChangePage = lazy(async () => ({
+  default: (await import('@/pages/confirm-email-change-page')).ConfirmEmailChangePage,
+}));
 const HomePage = lazy(async () => ({ default: (await import('@/pages/home-page')).HomePage }));
 const LoginPage = lazy(async () => ({ default: (await import('@/pages/login-page')).LoginPage }));
 const ForgotPasswordPage = lazy(async () => ({
@@ -76,6 +79,7 @@ function App() {
         <Route path="reset-password" element={<ResetPasswordPage />} />
         <Route path="register" element={<RegisterPage />} />
         <Route path="verify-email" element={<VerifyEmailPage />} />
+        <Route path="confirm-email-change" element={<ConfirmEmailChangePage />} />
         <Route path="recipes" element={<RecipesPage />} />
         <Route path="recipes/:slug" element={<RecipeDetailPage />} />
         <Route path="cooks/:username" element={<UserProfilePage />} />

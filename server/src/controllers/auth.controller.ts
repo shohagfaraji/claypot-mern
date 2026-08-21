@@ -7,9 +7,11 @@ import {
 } from '../lib/refresh-token.js';
 import type {
   ChangePasswordInput,
+  ConfirmEmailChangeInput,
   LoginInput,
   RegisterInput,
   RequestPasswordResetInput,
+  RequestEmailChangeInput,
   ResetPasswordInput,
   SessionIdParams,
   UpdateProfileInput,
@@ -29,6 +31,14 @@ import {
   verifyEmail,
 } from '../services/email-verification.service.js';
 import { requestPasswordReset, resetPassword } from '../services/password-recovery.service.js';
+import {
+  cancelEmailChange,
+  confirmEmailChange as confirmPendingEmailChange,
+  getPendingEmailChange,
+  requestEmailChange,
+  resendEmailChange,
+} from '../services/email-change.service.js';
+import { sendEmailChangedNotice } from '../services/email.service.js';
 import {
   createAuthSession,
   listUserAuthSessions,
@@ -257,6 +267,71 @@ export const changePassword: RequestHandler = async (request, response) => {
   response.status(200).json({
     data: {
       message: 'Your password has been updated and other sessions have been signed out.',
+    },
+  });
+};
+
+export const showPendingEmailChange: RequestHandler = async (request, response) => {
+  if (request.auth === undefined) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  const pending = await getPendingEmailChange(request.auth.userId);
+  response.status(200).json({ data: { pending } });
+};
+
+export const startEmailChange: RequestHandler = async (request, response) => {
+  if (request.auth === undefined) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  const { email, password } = request.body as RequestEmailChangeInput;
+  const pending = await requestEmailChange(request.auth.userId, email, password);
+  response.status(202).json({ data: { pending } });
+};
+
+export const resendPendingEmailChange: RequestHandler = async (request, response) => {
+  if (request.auth === undefined) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  const pending = await resendEmailChange(request.auth.userId);
+  response.status(202).json({ data: { pending } });
+};
+
+export const removePendingEmailChange: RequestHandler = async (request, response) => {
+  if (request.auth === undefined) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication is required.');
+  }
+
+  await cancelEmailChange(request.auth.userId);
+  response.status(204).send();
+};
+
+export const confirmEmailChange: RequestHandler = async (request, response) => {
+  const { token } = request.body as ConfirmEmailChangeInput;
+  const cookieValue = request.cookies[refreshTokenCookieName] as unknown;
+  const result = await confirmPendingEmailChange(
+    token,
+    typeof cookieValue === 'string' && cookieValue.length > 0 ? cookieValue : undefined,
+  );
+
+  if (!result.currentSessionPreserved) {
+    response.clearCookie(refreshTokenCookieName, getClearRefreshTokenCookieOptions());
+  }
+  try {
+    await sendEmailChangedNotice({
+      recipientName: result.recipientName,
+      recipientEmail: result.previousEmail,
+    });
+  } catch (error) {
+    request.log.warn({ err: error }, 'Email change security notice was not sent');
+  }
+
+  response.status(200).json({
+    data: {
+      status: result.status,
+      currentSessionPreserved: result.currentSessionPreserved,
     },
   });
 };
