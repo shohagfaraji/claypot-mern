@@ -71,6 +71,25 @@ export const verifyEmailInputSchema = z.strictObject({
     .regex(/^[a-zA-Z0-9_-]+$/, 'Verification token is invalid.'),
 });
 
+export const requestEmailChangeInputSchema = z.strictObject({
+  email: emailSchema,
+  password: z
+    .string()
+    .min(1, 'Current password is required.')
+    .max(72, 'Current password cannot exceed 72 characters.')
+    .refine((password) => Buffer.byteLength(password, 'utf8') <= 72, {
+      message: 'Current password cannot exceed 72 bytes.',
+    }),
+});
+
+export const confirmEmailChangeInputSchema = z.strictObject({
+  token: z
+    .string()
+    .trim()
+    .length(43, 'Email change token is invalid.')
+    .regex(/^[a-zA-Z0-9_-]+$/, 'Email change token is invalid.'),
+});
+
 export const requestPasswordResetInputSchema = z.strictObject({
   email: emailSchema,
 });
@@ -145,6 +164,8 @@ export const updateProfileInputSchema = z
 export type RegisterInput = z.infer<typeof registerInputSchema>;
 export type LoginInput = z.infer<typeof loginInputSchema>;
 export type VerifyEmailInput = z.infer<typeof verifyEmailInputSchema>;
+export type RequestEmailChangeInput = z.infer<typeof requestEmailChangeInputSchema>;
+export type ConfirmEmailChangeInput = z.infer<typeof confirmEmailChangeInputSchema>;
 export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetInputSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordInputSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordInputSchema>;

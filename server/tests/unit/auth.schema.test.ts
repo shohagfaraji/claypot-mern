@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   changePasswordInputSchema,
+  confirmEmailChangeInputSchema,
   loginInputSchema,
   registerInputSchema,
+  requestEmailChangeInputSchema,
   sessionIdParamsSchema,
   updateProfileInputSchema,
   verifyEmailInputSchema,
@@ -167,6 +169,27 @@ describe('email verification input schema', () => {
     expect(() =>
       verifyEmailInputSchema.parse({ token: 'a'.repeat(43), userId: 'user-id' }),
     ).toThrow();
+  });
+});
+
+describe('email change schemas', () => {
+  it('normalizes a new email request and validates its password', () => {
+    expect(
+      requestEmailChangeInputSchema.parse({
+        email: '  NEW@EXAMPLE.COM  ',
+        password: 'Claypot9',
+      }),
+    ).toEqual({ email: 'new@example.com', password: 'Claypot9' });
+  });
+
+  it('rejects malformed requests and confirmation tokens', () => {
+    expect(
+      requestEmailChangeInputSchema.safeParse({ email: 'invalid', password: '' }).success,
+    ).toBe(false);
+    expect(confirmEmailChangeInputSchema.safeParse({ token: 'short' }).success).toBe(false);
+    expect(
+      confirmEmailChangeInputSchema.safeParse({ token: 'a'.repeat(43), userId: 'user-id' }).success,
+    ).toBe(false);
   });
 });
 

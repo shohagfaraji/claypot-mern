@@ -16,10 +16,15 @@ vi.mock('../../src/config/env.js', () => ({
     EMAIL_FROM: 'Claypot <onboarding@resend.dev>',
     CLIENT_ORIGIN: 'https://claypot.netlify.app',
     EMAIL_VERIFICATION_TOKEN_TTL_HOURS: 24,
+    EMAIL_CHANGE_TOKEN_TTL_HOURS: 24,
   },
 }));
 
-import { sendEmailVerificationMessage } from '../../src/services/email.service.js';
+import {
+  sendEmailChangedNotice,
+  sendEmailChangeMessage,
+  sendEmailVerificationMessage,
+} from '../../src/services/email.service.js';
 
 describe('email delivery service', () => {
   beforeEach(() => {
@@ -59,5 +64,35 @@ describe('email delivery service', () => {
       statusCode: 503,
       code: 'EMAIL_DELIVERY_FAILED',
     });
+  });
+
+  it('sends email change confirmation and security notice messages', async () => {
+    sendEmailMock.mockResolvedValue({ data: { id: 'email-id' }, error: null });
+
+    await sendEmailChangeMessage({
+      recipientName: 'Amina Rahman',
+      recipientEmail: 'new@example.com',
+      token: 'a'.repeat(43),
+    });
+    await sendEmailChangedNotice({
+      recipientName: 'Amina Rahman',
+      recipientEmail: 'old@example.com',
+    });
+
+    expect(sendEmailMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        to: 'new@example.com',
+        subject: 'Confirm your new Claypot email address',
+        text: expect.stringContaining('https://claypot.netlify.app/confirm-email-change?token='),
+      }),
+    );
+    expect(sendEmailMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        to: 'old@example.com',
+        subject: 'Your Claypot email address was changed',
+      }),
+    );
   });
 });

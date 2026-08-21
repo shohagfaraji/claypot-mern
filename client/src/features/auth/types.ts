@@ -22,6 +22,7 @@ export interface RegistrationSession extends AuthSession {
 
 export type EmailVerificationRequestStatus = 'sent' | 'already_verified';
 export type EmailVerificationStatus = 'verified' | 'already_verified';
+export type EmailChangeStatus = 'changed';
 
 export interface LoginInput {
   identifier: string;
@@ -40,6 +41,22 @@ export interface ResetPasswordInput {
 export interface ChangePasswordInput {
   currentPassword: string;
   newPassword: string;
+}
+
+export interface RequestEmailChangeInput {
+  email: string;
+  password: string;
+}
+
+export interface PendingEmailChange {
+  email: string;
+  expiresAt: string;
+  canResendAt: string;
+}
+
+export interface ConfirmedEmailChange {
+  status: EmailChangeStatus;
+  currentSessionPreserved: boolean;
 }
 
 export interface AccountSession {
