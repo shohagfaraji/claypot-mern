@@ -119,6 +119,21 @@ export const changePasswordInputSchema = z
     message: 'New password must be different from the current password.',
   });
 
+export const deleteAccountInputSchema = z.strictObject({
+  password: z
+    .string()
+    .min(1, 'Current password is required.')
+    .max(72, 'Current password cannot exceed 72 characters.')
+    .refine((password) => Buffer.byteLength(password, 'utf8') <= 72, {
+      message: 'Current password cannot exceed 72 bytes.',
+    }),
+  confirmation: z
+    .string()
+    .trim()
+    .min(3, 'Enter your username to confirm account deletion.')
+    .max(30, 'Username cannot exceed 30 characters.'),
+});
+
 export const sessionIdParamsSchema = z.strictObject({
   sessionId: z.string().regex(/^[a-f0-9]{24}$/i, 'Session ID is invalid.'),
 });
@@ -169,5 +184,6 @@ export type ConfirmEmailChangeInput = z.infer<typeof confirmEmailChangeInputSche
 export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetInputSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordInputSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordInputSchema>;
+export type DeleteAccountInput = z.infer<typeof deleteAccountInputSchema>;
 export type SessionIdParams = z.infer<typeof sessionIdParamsSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileInputSchema>;

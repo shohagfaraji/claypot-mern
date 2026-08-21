@@ -8,6 +8,7 @@ const {
   changeAccountPasswordMock,
   confirmEmailChangeMock,
   createAuthSessionMock,
+  deleteAccountMock,
   getPendingEmailChangeMock,
   requestEmailVerificationMock,
   requestEmailChangeMock,
@@ -30,6 +31,7 @@ const {
   changeAccountPasswordMock: vi.fn(),
   confirmEmailChangeMock: vi.fn(),
   createAuthSessionMock: vi.fn(),
+  deleteAccountMock: vi.fn(),
   getPendingEmailChangeMock: vi.fn(),
   requestEmailVerificationMock: vi.fn(),
   requestEmailChangeMock: vi.fn(),
@@ -70,6 +72,10 @@ vi.mock('../../src/services/password-recovery.service.js', () => ({
 
 vi.mock('../../src/services/account-security.service.js', () => ({
   changeAccountPassword: changeAccountPasswordMock,
+}));
+
+vi.mock('../../src/services/account-deletion.service.js', () => ({
+  deleteAccount: deleteAccountMock,
 }));
 
 vi.mock('../../src/services/email-change.service.js', () => ({
@@ -291,6 +297,63 @@ describe('account security routes', () => {
     await request(app).get('/api/v1/auth/sessions').set('Authorization', authorization).expect(401);
 
     expect(listUserAuthSessionsMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('account deletion route', () => {
+  const app = createApp();
+  const authorization = 'Bearer signed-access-token';
+  const refreshCookie = 'claypot_refresh=current-refresh-token';
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    verifyAccessTokenMock.mockResolvedValue({ userId: 'user-id', role: 'user' });
+  });
+
+  it('deletes the authenticated account and clears its refresh cookie', async () => {
+    const response = await request(app)
+      .delete('/api/v1/auth/me')
+      .set('Authorization', authorization)
+      .set('Cookie', refreshCookie)
+      .send({ password: 'Claypot9', confirmation: '  amina_kitchen  ' })
+      .expect(200);
+
+    expect(deleteAccountMock).toHaveBeenCalledWith('user-id', 'current-refresh-token', {
+      password: 'Claypot9',
+      confirmation: 'amina_kitchen',
+    });
+    expect(response.body).toEqual({
+      data: { message: 'Your account and associated data have been deleted.' },
+    });
+    expect(response.headers['set-cookie']).toEqual(
+      expect.arrayContaining([expect.stringContaining('claypot_refresh=;')]),
+    );
+  });
+
+  it('requires authentication and a current refresh session', async () => {
+    await request(app)
+      .delete('/api/v1/auth/me')
+      .set('Cookie', refreshCookie)
+      .send({ password: 'Claypot9', confirmation: 'amina_kitchen' })
+      .expect(401);
+    await request(app)
+      .delete('/api/v1/auth/me')
+      .set('Authorization', authorization)
+      .send({ password: 'Claypot9', confirmation: 'amina_kitchen' })
+      .expect(401);
+
+    expect(deleteAccountMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid confirmation input before deleting account data', async () => {
+    await request(app)
+      .delete('/api/v1/auth/me')
+      .set('Authorization', authorization)
+      .set('Cookie', refreshCookie)
+      .send({ password: '', confirmation: '' })
+      .expect(400);
+
+    expect(deleteAccountMock).not.toHaveBeenCalled();
   });
 });
 

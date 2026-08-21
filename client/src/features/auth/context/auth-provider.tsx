@@ -95,6 +95,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setState({ user: null, accessToken: null, status: 'unauthenticated' });
   }, []);
 
+  const clearSession = useCallback(() => {
+    sessionRestoreRequest = null;
+    setState({ user: null, accessToken: null, status: 'unauthenticated' });
+  }, []);
+
   const renewAccessToken = useCallback(async () => {
     tokenRenewalRequest.current ??= refreshAccessToken()
       .then((accessToken) => {
@@ -120,8 +125,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const value = useMemo(
-    () => ({ ...state, signIn, signUp, signOut, renewAccessToken, updateSessionUser }),
-    [renewAccessToken, signIn, signOut, signUp, state, updateSessionUser],
+    () => ({
+      ...state,
+      signIn,
+      signUp,
+      signOut,
+      clearSession,
+      renewAccessToken,
+      updateSessionUser,
+    }),
+    [clearSession, renewAccessToken, signIn, signOut, signUp, state, updateSessionUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

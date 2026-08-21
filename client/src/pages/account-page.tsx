@@ -21,8 +21,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { resendVerificationEmail, updateProfile } from '@/features/auth/api/auth';
-import { AccountSecurity } from '@/features/auth/components/account-security';
+import { AccountDeletion } from '@/features/auth/components/account-deletion';
 import { AccountEmailChange } from '@/features/auth/components/account-email-change';
+import { AccountSecurity } from '@/features/auth/components/account-security';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useAuthenticatedRequest } from '@/features/auth/hooks/use-authenticated-request';
 import { ImageUploadField } from '@/features/media/components/image-upload-field';
@@ -399,6 +400,8 @@ export function AccountPage() {
           </CardContent>
         </Card>
       </section>
+
+      <AccountDeletion />
     </AppShell>
   );
 }
