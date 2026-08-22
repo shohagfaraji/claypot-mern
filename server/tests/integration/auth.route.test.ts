@@ -180,6 +180,7 @@ describe('email change routes', () => {
     expect(response.body).toEqual({
       data: { status: 'changed', currentSessionPreserved: false },
     });
+    expect(response.headers['ratelimit-policy']).toContain('email-action');
     expect(response.headers['set-cookie']).toEqual(
       expect.arrayContaining([expect.stringContaining('claypot_refresh=;')]),
     );
@@ -378,6 +379,7 @@ describe('password recovery routes', () => {
           message: 'If an account matches that email, a password reset link will be sent.',
         },
       });
+      expect(response.headers['ratelimit-policy']).toContain('password-recovery');
     },
   );
 
@@ -457,6 +459,7 @@ describe('POST /api/v1/auth/register', () => {
         verificationEmailSent: true,
       },
     });
+    expect(response.headers['ratelimit-policy']).toContain('registration');
     expect(sendEmailVerificationMock).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'user-id', email: 'amina@example.com' }),
     );
@@ -659,6 +662,7 @@ describe('POST /api/v1/auth/login', () => {
         accessToken: 'signed-access-token',
       },
     });
+    expect(response.headers['ratelimit-policy']).toContain('login');
     expect(response.body).not.toHaveProperty('data.refreshToken');
     const cookies = response.headers['set-cookie'];
 
@@ -734,6 +738,7 @@ describe('POST /api/v1/auth/refresh', () => {
         accessToken: 'new-access-token',
       },
     });
+    expect(response.headers['ratelimit-policy']).toContain('token-refresh');
     expect(response.body).not.toHaveProperty('data.refreshToken');
     expect(response.headers['set-cookie']).toEqual(
       expect.arrayContaining([expect.stringContaining('claypot_refresh=new-refresh-token')]),

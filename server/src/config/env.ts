@@ -2,11 +2,13 @@ import 'dotenv/config';
 import { z } from 'zod';
 
 const developmentAccessTokenSecret = 'development-only-access-token-secret';
+const rateLimitMaximumSchema = z.coerce.number().int().positive().max(10_000);
 
 const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: z.coerce.number().int().positive().max(65_535).default(5000),
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
     CLIENT_ORIGIN: z.url().default('http://localhost:5173'),
     LOG_LEVEL: z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
@@ -27,6 +29,13 @@ const envSchema = z
     ACCESS_TOKEN_SECRET: z.string().min(32).default(developmentAccessTokenSecret),
     ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().max(60).default(15),
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().max(30).default(7),
+    RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().max(1_440).default(15),
+    LOGIN_RATE_LIMIT_MAX: rateLimitMaximumSchema.default(10),
+    REGISTRATION_RATE_LIMIT_MAX: rateLimitMaximumSchema.default(5),
+    PASSWORD_RECOVERY_RATE_LIMIT_MAX: rateLimitMaximumSchema.default(5),
+    EMAIL_ACTION_RATE_LIMIT_MAX: rateLimitMaximumSchema.default(10),
+    REFRESH_RATE_LIMIT_MAX: rateLimitMaximumSchema.default(30),
+    MEDIA_RATE_LIMIT_MAX: rateLimitMaximumSchema.default(30),
     RESEND_API_KEY: z.string().trim().min(10).optional(),
     EMAIL_FROM: z.string().trim().min(3).max(320).optional(),
     EMAIL_VERIFICATION_TOKEN_TTL_HOURS: z.coerce.number().int().positive().max(168).default(24),

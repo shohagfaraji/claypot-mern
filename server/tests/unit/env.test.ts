@@ -6,6 +6,7 @@ describe('environment configuration', () => {
     expect(loadEnv({})).toEqual({
       NODE_ENV: 'development',
       PORT: 5000,
+      TRUST_PROXY_HOPS: 0,
       CLIENT_ORIGIN: 'http://localhost:5173',
       LOG_LEVEL: 'info',
       MONGODB_URI: 'mongodb://127.0.0.1:27017/claypot',
@@ -14,6 +15,13 @@ describe('environment configuration', () => {
       ACCESS_TOKEN_SECRET: 'development-only-access-token-secret',
       ACCESS_TOKEN_TTL_MINUTES: 15,
       REFRESH_TOKEN_TTL_DAYS: 7,
+      RATE_LIMIT_WINDOW_MINUTES: 15,
+      LOGIN_RATE_LIMIT_MAX: 10,
+      REGISTRATION_RATE_LIMIT_MAX: 5,
+      PASSWORD_RECOVERY_RATE_LIMIT_MAX: 5,
+      EMAIL_ACTION_RATE_LIMIT_MAX: 10,
+      REFRESH_RATE_LIMIT_MAX: 30,
+      MEDIA_RATE_LIMIT_MAX: 30,
       EMAIL_VERIFICATION_TOKEN_TTL_HOURS: 24,
       EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS: 60,
       EMAIL_CHANGE_TOKEN_TTL_HOURS: 24,
@@ -25,6 +33,20 @@ describe('environment configuration', () => {
 
   it('coerces a valid port number', () => {
     expect(loadEnv({ PORT: '8080' }).PORT).toBe(8080);
+  });
+
+  it('coerces valid proxy and rate-limit settings', () => {
+    expect(
+      loadEnv({
+        TRUST_PROXY_HOPS: '1',
+        RATE_LIMIT_WINDOW_MINUTES: '30',
+        LOGIN_RATE_LIMIT_MAX: '20',
+      }),
+    ).toMatchObject({
+      TRUST_PROXY_HOPS: 1,
+      RATE_LIMIT_WINDOW_MINUTES: 30,
+      LOGIN_RATE_LIMIT_MAX: 20,
+    });
   });
 
   it('rejects invalid configuration', () => {
@@ -39,6 +61,8 @@ describe('environment configuration', () => {
     expect(() => loadEnv({ REFRESH_TOKEN_TTL_DAYS: '31' })).toThrow(
       'Invalid environment variables',
     );
+    expect(() => loadEnv({ TRUST_PROXY_HOPS: '-1' })).toThrow('Invalid environment variables');
+    expect(() => loadEnv({ LOGIN_RATE_LIMIT_MAX: '0' })).toThrow('Invalid environment variables');
   });
 
   it('requires a unique access token secret in production', () => {
