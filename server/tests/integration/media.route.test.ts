@@ -42,6 +42,7 @@ describe('POST /api/v1/media/images/signature', () => {
 
     expect(createImageUploadSignatureMock).toHaveBeenCalledWith('user-id', 'recipe-cover');
     expect(response.body.data.upload.signature).toBe('signed-parameters');
+    expect(response.headers['ratelimit-policy']).toContain('media');
   });
 
   it('authenticates before validating upload input', async () => {

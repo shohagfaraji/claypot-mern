@@ -20,6 +20,7 @@ export function createApp() {
   const app = express();
 
   app.disable('x-powered-by');
+  if (env.TRUST_PROXY_HOPS > 0) app.set('trust proxy', env.TRUST_PROXY_HOPS);
   app.use(
     pinoHttp({
       logger,
