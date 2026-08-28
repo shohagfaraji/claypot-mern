@@ -5,6 +5,7 @@ import {
   listUsersForAdmin,
   showAdminDashboard,
 } from '../controllers/admin.controller.js';
+import { listReportsForAdmin, reviewReport } from '../controllers/report.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { authorizeRoles } from '../middleware/authorize.js';
 import { validateBody, validateParams, validateQuery } from '../middleware/validate-request.js';
@@ -14,6 +15,11 @@ import {
   listAdminUsersQuerySchema,
   updateAdminUserRoleInputSchema,
 } from '../schemas/admin.schema.js';
+import {
+  contentReportIdParamsSchema,
+  listContentReportsQuerySchema,
+  reviewContentReportInputSchema,
+} from '../schemas/report.schema.js';
 
 export const adminRouter = Router();
 
@@ -39,4 +45,19 @@ adminRouter.patch(
   validateParams(adminUserIdParamsSchema),
   validateBody(updateAdminUserRoleInputSchema),
   changeUserRole,
+);
+adminRouter.get(
+  '/reports',
+  authenticate,
+  authorizeRoles('admin'),
+  validateQuery(listContentReportsQuerySchema),
+  listReportsForAdmin,
+);
+adminRouter.patch(
+  '/reports/:reportId',
+  authenticate,
+  authorizeRoles('admin'),
+  validateParams(contentReportIdParamsSchema),
+  validateBody(reviewContentReportInputSchema),
+  reviewReport,
 );

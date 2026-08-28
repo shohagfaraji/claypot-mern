@@ -12,6 +12,9 @@ const AdminDashboardPage = lazy(async () => ({
 const AdminRecipesPage = lazy(async () => ({
   default: (await import('@/pages/admin-recipes-page')).AdminRecipesPage,
 }));
+const AdminReportsPage = lazy(async () => ({
+  default: (await import('@/pages/admin-reports-page')).AdminReportsPage,
+}));
 const AdminUsersPage = lazy(async () => ({
   default: (await import('@/pages/admin-users-page')).AdminUsersPage,
 }));
@@ -87,6 +90,7 @@ function App() {
           <Route element={<AdminRoute />}>
             <Route element={<AdminLayout />}>
               <Route path="admin" element={<AdminDashboardPage />} />
+              <Route path="admin/reports" element={<AdminReportsPage />} />
               <Route path="admin/recipes" element={<AdminRecipesPage />} />
               <Route path="admin/users" element={<AdminUsersPage />} />
             </Route>

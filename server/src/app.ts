@@ -13,6 +13,7 @@ import { authRouter } from './routes/auth.route.js';
 import { healthRouter } from './routes/health.route.js';
 import { mediaRouter } from './routes/media.route.js';
 import { recipeRouter } from './routes/recipe.route.js';
+import { reportRouter } from './routes/report.route.js';
 import { reviewRouter } from './routes/review.route.js';
 import { userRouter } from './routes/user.route.js';
 
@@ -50,6 +51,7 @@ export function createApp() {
   app.use('/api/v1/auth', authRouter);
   app.use('/api/v1/media', mediaRouter);
   app.use('/api/v1/recipes', recipeRouter);
+  app.use('/api/v1/reports', reportRouter);
   app.use('/api/v1/reviews', reviewRouter);
   app.use('/api/v1/users', userRouter);
 

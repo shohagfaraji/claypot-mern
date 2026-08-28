@@ -7,6 +7,7 @@ const {
   deleteEmailVerificationTokensMock,
   deleteManagedImageAfterPersistenceMock,
   deletePasswordResetTokensMock,
+  deleteReportsMock,
   deleteRecipesMock,
   deleteRefreshSessionsMock,
   deleteReviewsMock,
@@ -27,6 +28,7 @@ const {
   deleteEmailVerificationTokensMock: vi.fn(),
   deleteManagedImageAfterPersistenceMock: vi.fn(),
   deletePasswordResetTokensMock: vi.fn(),
+  deleteReportsMock: vi.fn(),
   deleteRecipesMock: vi.fn(),
   deleteRefreshSessionsMock: vi.fn(),
   deleteReviewsMock: vi.fn(),
@@ -49,6 +51,9 @@ vi.mock('mongoose', async (importOriginal) => ({
 }));
 vi.mock('../../src/lib/password.js', () => ({ verifyPassword: verifyPasswordMock }));
 vi.mock('../../src/lib/refresh-token.js', () => ({ hashRefreshToken: hashRefreshTokenMock }));
+vi.mock('../../src/models/content-report.model.js', () => ({
+  ContentReportModel: { deleteMany: deleteReportsMock },
+}));
 vi.mock('../../src/services/media.service.js', () => ({
   deleteManagedImageAfterPersistence: deleteManagedImageAfterPersistenceMock,
 }));
@@ -147,6 +152,10 @@ describe('account deletion service', () => {
     );
     expect(deleteSavedRecipesMock).toHaveBeenCalledWith(
       { $or: [{ user: ownerId }, { recipe: { $in: [recipeId] } }] },
+      sessionOptions,
+    );
+    expect(deleteReportsMock).toHaveBeenCalledWith(
+      { $or: [{ reporter: ownerId }, { targetAuthor: ownerId }] },
       sessionOptions,
     );
     expect(deleteRecipesMock).toHaveBeenCalledWith({ author: ownerId }, sessionOptions);

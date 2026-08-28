@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   deleteManagedImageAfterPersistenceMock,
+  deleteReportsMock,
   deleteRecipeMock,
   deleteReviewsMock,
   deleteSavedRecipesMock,
@@ -11,6 +12,7 @@ const {
   withTransactionMock,
 } = vi.hoisted(() => ({
   deleteManagedImageAfterPersistenceMock: vi.fn(),
+  deleteReportsMock: vi.fn(),
   deleteRecipeMock: vi.fn(),
   deleteReviewsMock: vi.fn(),
   deleteSavedRecipesMock: vi.fn(),
@@ -26,6 +28,10 @@ vi.mock('mongoose', async (importOriginal) => ({
 
 vi.mock('../../src/services/media.service.js', () => ({
   deleteManagedImageAfterPersistence: deleteManagedImageAfterPersistenceMock,
+}));
+
+vi.mock('../../src/models/content-report.model.js', () => ({
+  ContentReportModel: { deleteMany: deleteReportsMock },
 }));
 
 vi.mock('../../src/models/recipe.model.js', () => ({
@@ -60,6 +66,7 @@ describe('recipe deletion', () => {
     });
     withTransactionMock.mockImplementation(async (operation: () => Promise<void>) => operation());
     deleteReviewsMock.mockResolvedValue({ deletedCount: 0 });
+    deleteReportsMock.mockResolvedValue({ deletedCount: 0 });
     deleteSavedRecipesMock.mockResolvedValue({ deletedCount: 0 });
   });
 
@@ -100,6 +107,7 @@ describe('recipe deletion', () => {
     await deleteRecipe(recipeId, { userId: authorId, role: 'user' });
 
     const recipe = new Types.ObjectId(recipeId);
+    expect(deleteReportsMock).toHaveBeenCalledWith({ recipe }, { session: expect.any(Object) });
     expect(deleteReviewsMock).toHaveBeenCalledWith({ recipe }, { session: expect.any(Object) });
     expect(deleteSavedRecipesMock).toHaveBeenCalledWith(
       { recipe },

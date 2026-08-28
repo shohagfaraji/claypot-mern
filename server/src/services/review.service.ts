@@ -1,6 +1,7 @@
-import { Types, type PipelineStage } from 'mongoose';
+import { startSession, Types, type PipelineStage } from 'mongoose';
 import { AppError } from '../errors/app-error.js';
 import type { AccessTokenIdentity } from '../lib/access-token.js';
+import { ContentReportModel } from '../models/content-report.model.js';
 import { RecipeModel } from '../models/recipe.model.js';
 import { ReviewModel, type Review } from '../models/review.model.js';
 import type {
@@ -260,12 +261,22 @@ export async function updateReview(
 }
 
 export async function deleteReview(reviewId: string, actor: AccessTokenIdentity): Promise<void> {
-  const filter: Record<string, unknown> = { _id: new Types.ObjectId(reviewId) };
+  const reviewObjectId = new Types.ObjectId(reviewId);
+  const filter: Record<string, unknown> = { _id: reviewObjectId };
   if (actor.role !== 'admin') filter.user = new Types.ObjectId(actor.userId);
+  const session = await startSession();
 
-  const review = await ReviewModel.findOneAndDelete(filter);
+  try {
+    await session.withTransaction(async () => {
+      const review = await ReviewModel.findOneAndDelete(filter, { session });
 
-  if (review === null) {
-    throw new AppError(404, 'REVIEW_NOT_FOUND', 'Review was not found.');
+      if (review === null) {
+        throw new AppError(404, 'REVIEW_NOT_FOUND', 'Review was not found.');
+      }
+
+      await ContentReportModel.deleteMany({ review: reviewObjectId }, { session });
+    });
+  } finally {
+    await session.endSession();
   }
 }

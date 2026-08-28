@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpen, LayoutDashboard, ShieldCheck, Users } from 'lucide-react';
+import { ArrowLeft, BookOpen, Flag, LayoutDashboard, ShieldCheck, Users } from 'lucide-react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 
 import { useAuth } from '@/features/auth/hooks/use-auth';
@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 
 const navigation = [
   { label: 'Overview', href: '/admin', icon: LayoutDashboard },
+  { label: 'Reports', href: '/admin/reports', icon: Flag },
   { label: 'Recipes', href: '/admin/recipes', icon: BookOpen },
   { label: 'Users', href: '/admin/users', icon: Users },
 ];
