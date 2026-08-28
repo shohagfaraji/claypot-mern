@@ -36,6 +36,7 @@ const envSchema = z
     EMAIL_ACTION_RATE_LIMIT_MAX: rateLimitMaximumSchema.default(10),
     REFRESH_RATE_LIMIT_MAX: rateLimitMaximumSchema.default(30),
     MEDIA_RATE_LIMIT_MAX: rateLimitMaximumSchema.default(30),
+    CONTENT_REPORT_RATE_LIMIT_MAX: rateLimitMaximumSchema.default(10),
     RESEND_API_KEY: z.string().trim().min(10).optional(),
     EMAIL_FROM: z.string().trim().min(3).max(320).optional(),
     EMAIL_VERIFICATION_TOKEN_TTL_HOURS: z.coerce.number().int().positive().max(168).default(24),

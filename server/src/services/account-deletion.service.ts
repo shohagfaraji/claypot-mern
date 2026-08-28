@@ -2,6 +2,7 @@ import { startSession, Types } from 'mongoose';
 import { AppError } from '../errors/app-error.js';
 import { verifyPassword } from '../lib/password.js';
 import { hashRefreshToken } from '../lib/refresh-token.js';
+import { ContentReportModel } from '../models/content-report.model.js';
 import { EmailChangeTokenModel } from '../models/email-change-token.model.js';
 import { EmailVerificationTokenModel } from '../models/email-verification-token.model.js';
 import { PasswordResetTokenModel } from '../models/password-reset-token.model.js';
@@ -90,6 +91,10 @@ export async function deleteAccount(
       );
       await SavedRecipeModel.deleteMany(
         { $or: [{ user: userObjectId }, { recipe: { $in: recipeIds } }] },
+        { session },
+      );
+      await ContentReportModel.deleteMany(
+        { $or: [{ reporter: userObjectId }, { targetAuthor: userObjectId }] },
         { session },
       );
       await RecipeModel.deleteMany({ author: userObjectId }, { session });

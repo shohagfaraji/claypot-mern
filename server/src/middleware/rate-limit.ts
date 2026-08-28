@@ -83,3 +83,9 @@ export const mediaRateLimit = createRateLimiter({
   limit: env.MEDIA_RATE_LIMIT_MAX,
   key: 'account',
 });
+
+export const contentReportRateLimit = createRateLimiter({
+  identifier: 'content-report',
+  limit: env.CONTENT_REPORT_RATE_LIMIT_MAX,
+  key: 'account',
+});

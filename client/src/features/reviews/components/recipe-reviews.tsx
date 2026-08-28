@@ -27,6 +27,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useAuthenticatedRequest } from '@/features/auth/hooks/use-authenticated-request';
+import { ReportContentDialog } from '@/features/reports/components/report-content-dialog';
 import { createReview, deleteReview, updateReview } from '@/features/reviews/api/reviews';
 import { useCurrentUserReview } from '@/features/reviews/hooks/use-current-user-review';
 import { useReviews } from '@/features/reviews/hooks/use-reviews';
@@ -408,6 +409,7 @@ export function RecipeReviews({ recipeId, authorId }: RecipeReviewsProps) {
               ) : (
                 reviewList.reviews.map((review) => {
                   const isOwnReview = user?.id === review.user.id;
+                  const canReport = status === 'authenticated' && user !== null && !isOwnReview;
                   const canDelete =
                     status === 'authenticated' &&
                     user !== null &&
@@ -448,6 +450,14 @@ export function RecipeReviews({ recipeId, authorId }: RecipeReviewsProps) {
                             rating={review.rating}
                             label={`${review.rating} out of 5 stars`}
                           />
+                          {canReport && (
+                            <ReportContentDialog
+                              compact
+                              targetType="review"
+                              targetId={review.id}
+                              targetLabel={`Report review by ${review.user.name}`}
+                            />
+                          )}
                           {canDelete && !isOwnReview && (
                             <Button
                               type="button"

@@ -4,19 +4,36 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const {
   aggregateMock,
   createReviewMock,
+  deleteReportsMock,
   deleteReviewMock,
+  endSessionMock,
   findRecipeMock,
   findReviewMock,
   recipeExistsMock,
   selectRecipeMock,
+  startSessionMock,
+  withTransactionMock,
 } = vi.hoisted(() => ({
   aggregateMock: vi.fn(),
   createReviewMock: vi.fn(),
+  deleteReportsMock: vi.fn(),
   deleteReviewMock: vi.fn(),
+  endSessionMock: vi.fn(),
   findRecipeMock: vi.fn(),
   findReviewMock: vi.fn(),
   recipeExistsMock: vi.fn(),
   selectRecipeMock: vi.fn(),
+  startSessionMock: vi.fn(),
+  withTransactionMock: vi.fn(),
+}));
+
+vi.mock('mongoose', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('mongoose')>()),
+  startSession: startSessionMock,
+}));
+
+vi.mock('../../src/models/content-report.model.js', () => ({
+  ContentReportModel: { deleteMany: deleteReportsMock },
 }));
 
 vi.mock('../../src/models/recipe.model.js', () => ({
@@ -71,6 +88,11 @@ describe('review service', () => {
     vi.resetAllMocks();
     findRecipeMock.mockReturnValue({ select: selectRecipeMock });
     recipeExistsMock.mockResolvedValue({ _id: new Types.ObjectId(recipeId) });
+    startSessionMock.mockResolvedValue({
+      withTransaction: withTransactionMock,
+      endSession: endSessionMock,
+    });
+    withTransactionMock.mockImplementation(async (operation: () => Promise<void>) => operation());
   });
 
   it('creates one review for another cook published recipe', async () => {
@@ -183,13 +205,23 @@ describe('review service', () => {
     deleteReviewMock.mockResolvedValue({ id: reviewId });
 
     await deleteReview(reviewId, { userId, role: 'user' });
-    expect(deleteReviewMock).toHaveBeenLastCalledWith({
-      _id: new Types.ObjectId(reviewId),
-      user: new Types.ObjectId(userId),
-    });
+    expect(deleteReviewMock).toHaveBeenLastCalledWith(
+      {
+        _id: new Types.ObjectId(reviewId),
+        user: new Types.ObjectId(userId),
+      },
+      { session: expect.any(Object) },
+    );
 
     await deleteReview(reviewId, { userId: '507f1f77bcf86cd799439014', role: 'admin' });
-    expect(deleteReviewMock).toHaveBeenLastCalledWith({ _id: new Types.ObjectId(reviewId) });
+    expect(deleteReviewMock).toHaveBeenLastCalledWith(
+      { _id: new Types.ObjectId(reviewId) },
+      { session: expect.any(Object) },
+    );
+    expect(deleteReportsMock).toHaveBeenCalledWith(
+      { review: new Types.ObjectId(reviewId) },
+      { session: expect.any(Object) },
+    );
 
     deleteReviewMock.mockResolvedValue(null);
     await expect(deleteReview(reviewId, { userId, role: 'user' })).rejects.toMatchObject({
