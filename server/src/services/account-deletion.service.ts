@@ -6,6 +6,7 @@ import { ContentReportModel } from '../models/content-report.model.js';
 import { EmailChangeTokenModel } from '../models/email-change-token.model.js';
 import { EmailVerificationTokenModel } from '../models/email-verification-token.model.js';
 import { PasswordResetTokenModel } from '../models/password-reset-token.model.js';
+import { NotificationModel } from '../models/notification.model.js';
 import { RecipeModel } from '../models/recipe.model.js';
 import { RefreshSessionModel } from '../models/refresh-session.model.js';
 import { ReviewModel } from '../models/review.model.js';
@@ -95,6 +96,16 @@ export async function deleteAccount(
       );
       await ContentReportModel.deleteMany(
         { $or: [{ reporter: userObjectId }, { targetAuthor: userObjectId }] },
+        { session },
+      );
+      await NotificationModel.deleteMany(
+        {
+          $or: [
+            { recipient: userObjectId },
+            { actor: userObjectId },
+            { recipe: { $in: recipeIds } },
+          ],
+        },
         { session },
       );
       await RecipeModel.deleteMany({ author: userObjectId }, { session });

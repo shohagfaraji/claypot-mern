@@ -2,6 +2,7 @@ import { startSession, Types, type PipelineStage } from 'mongoose';
 import { AppError } from '../errors/app-error.js';
 import type { AccessTokenIdentity } from '../lib/access-token.js';
 import { ContentReportModel } from '../models/content-report.model.js';
+import { NotificationModel } from '../models/notification.model.js';
 import { RecipeModel } from '../models/recipe.model.js';
 import { ReviewModel, type Review } from '../models/review.model.js';
 import type {
@@ -9,6 +10,7 @@ import type {
   ListReviewsQuery,
   UpdateReviewInput,
 } from '../schemas/review.schema.js';
+import { createReviewNotification } from './notification.service.js';
 
 export interface PublicReview {
   id: string;
@@ -90,23 +92,48 @@ export async function createReview(
   }
 
   try {
-    const review = await ReviewModel.create({
-      recipe: new Types.ObjectId(recipeId),
-      user: new Types.ObjectId(actor.userId),
-      rating: input.rating,
-      comment: input.comment,
-    });
-    const user = await review.populate<{ user: PublicReview['user'] }>({
-      path: 'user',
-      select: 'name username avatarUrl',
-    });
+    const session = await startSession();
 
-    return toOwnedReview(review, {
-      id: user.user.id,
-      name: user.user.name,
-      username: user.user.username,
-      avatarUrl: user.user.avatarUrl,
-    });
+    try {
+      const review = await session.withTransaction(async () => {
+        const [createdReview] = await ReviewModel.create(
+          [
+            {
+              recipe: new Types.ObjectId(recipeId),
+              user: new Types.ObjectId(actor.userId),
+              rating: input.rating,
+              comment: input.comment,
+            },
+          ],
+          { session },
+        );
+
+        if (createdReview === undefined) throw new Error('Review creation did not complete.');
+        await createReviewNotification({
+          recipientId: recipe.author,
+          actorId: actor.userId,
+          recipeId: new Types.ObjectId(recipeId),
+          reviewId: createdReview._id,
+          session,
+        });
+        return createdReview;
+      });
+
+      if (review === undefined) throw new Error('Review creation did not complete.');
+      const user = await review.populate<{ user: PublicReview['user'] }>({
+        path: 'user',
+        select: 'name username avatarUrl',
+      });
+
+      return toOwnedReview(review, {
+        id: user.user.id,
+        name: user.user.name,
+        username: user.user.username,
+        avatarUrl: user.user.avatarUrl,
+      });
+    } finally {
+      await session.endSession();
+    }
   } catch (error) {
     if (isDuplicateKeyError(error)) {
       throw new AppError(409, 'REVIEW_ALREADY_EXISTS', 'You have already reviewed this recipe.', {
@@ -275,6 +302,7 @@ export async function deleteReview(reviewId: string, actor: AccessTokenIdentity)
       }
 
       await ContentReportModel.deleteMany({ review: reviewObjectId }, { session });
+      await NotificationModel.deleteMany({ review: reviewObjectId }, { session });
     });
   } finally {
     await session.endSession();

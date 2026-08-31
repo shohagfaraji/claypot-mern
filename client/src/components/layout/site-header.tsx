@@ -1,8 +1,18 @@
-import { Bookmark, BookOpen, LayoutDashboard, Menu, Search, UserRound, X } from 'lucide-react';
+import {
+  Bell,
+  Bookmark,
+  BookOpen,
+  LayoutDashboard,
+  Menu,
+  Search,
+  UserRound,
+  X,
+} from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useNotificationContext } from '@/features/notifications/hooks/use-notification-context';
 import { cn } from '@/lib/utils';
 
 const navigation = [
@@ -14,6 +24,11 @@ const navigation = [
 export function SiteHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { status, user } = useAuth();
+  const { unreadCount } = useNotificationContext();
+  const notificationLabel =
+    unreadCount === 0
+      ? 'Notifications'
+      : `${unreadCount} unread ${unreadCount === 1 ? 'notification' : 'notifications'}`;
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/90 backdrop-blur-xl">
@@ -48,6 +63,19 @@ export function SiteHeader() {
                   Admin
                 </Link>
               )}
+              <Link
+                className={cn(buttonVariants({ variant: 'ghost', size: 'icon-lg' }), 'relative')}
+                to="/notifications"
+                aria-label={notificationLabel}
+                title="Notifications"
+              >
+                <Bell />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 grid min-w-4.5 place-items-center rounded-full bg-destructive px-1 text-[10px] leading-4 font-bold text-white">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </Link>
               <Link
                 className={buttonVariants({ variant: 'ghost', size: 'lg' })}
                 to="/saved-recipes"
@@ -117,6 +145,24 @@ export function SiteHeader() {
                       Admin dashboard
                     </Link>
                   )}
+                  <Link
+                    className={cn(
+                      buttonVariants({ variant: 'outline', size: 'lg' }),
+                      'w-full justify-between',
+                    )}
+                    to="/notifications"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      <Bell />
+                      Notifications
+                    </span>
+                    {unreadCount > 0 && (
+                      <span className="rounded-full bg-destructive px-2 py-0.5 text-xs font-bold text-white">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
+                  </Link>
                   <Link
                     className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}
                     to="/saved-recipes"

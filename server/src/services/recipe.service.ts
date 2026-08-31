@@ -4,6 +4,7 @@ import { AppError } from '../errors/app-error.js';
 import type { AccessTokenIdentity } from '../lib/access-token.js';
 import { createSlugBase } from '../lib/slug.js';
 import { ContentReportModel } from '../models/content-report.model.js';
+import { NotificationModel } from '../models/notification.model.js';
 import { RecipeModel, type Recipe } from '../models/recipe.model.js';
 import { ReviewModel } from '../models/review.model.js';
 import { SavedRecipeModel } from '../models/saved-recipe.model.js';
@@ -509,6 +510,7 @@ export async function deleteRecipe(recipeId: string, actor: AccessTokenIdentity)
       }
 
       imagePublicId = recipe.imagePublicId;
+      await NotificationModel.deleteMany({ recipe: recipeObjectId }, { session });
       await ContentReportModel.deleteMany({ recipe: recipeObjectId }, { session });
       await ReviewModel.deleteMany({ recipe: recipeObjectId }, { session });
       await SavedRecipeModel.deleteMany({ recipe: recipeObjectId }, { session });

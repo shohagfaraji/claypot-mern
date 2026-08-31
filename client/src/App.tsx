@@ -38,6 +38,9 @@ const MyRecipesPage = lazy(async () => ({
 const NotFoundPage = lazy(async () => ({
   default: (await import('@/pages/not-found-page')).NotFoundPage,
 }));
+const NotificationsPage = lazy(async () => ({
+  default: (await import('@/pages/notifications-page')).NotificationsPage,
+}));
 const RecipeDetailPage = lazy(async () => ({
   default: (await import('@/pages/recipe-detail-page')).RecipeDetailPage,
 }));
@@ -96,6 +99,7 @@ function App() {
             </Route>
           </Route>
           <Route path="account" element={<AccountPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
           <Route path="my-recipes" element={<MyRecipesPage />} />
           <Route path="saved-recipes" element={<SavedRecipesPage />} />
           <Route path="recipes/new" element={<CreateRecipePage />} />

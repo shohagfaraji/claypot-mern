@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const {
   aggregateMock,
   createReviewMock,
+  createReviewNotificationMock,
+  deleteNotificationsMock,
   deleteReportsMock,
   deleteReviewMock,
   endSessionMock,
@@ -16,6 +18,8 @@ const {
 } = vi.hoisted(() => ({
   aggregateMock: vi.fn(),
   createReviewMock: vi.fn(),
+  createReviewNotificationMock: vi.fn(),
+  deleteNotificationsMock: vi.fn(),
   deleteReportsMock: vi.fn(),
   deleteReviewMock: vi.fn(),
   endSessionMock: vi.fn(),
@@ -34,6 +38,14 @@ vi.mock('mongoose', async (importOriginal) => ({
 
 vi.mock('../../src/models/content-report.model.js', () => ({
   ContentReportModel: { deleteMany: deleteReportsMock },
+}));
+
+vi.mock('../../src/models/notification.model.js', () => ({
+  NotificationModel: { deleteMany: deleteNotificationsMock },
+}));
+
+vi.mock('../../src/services/notification.service.js', () => ({
+  createReviewNotification: createReviewNotificationMock,
 }));
 
 vi.mock('../../src/models/recipe.model.js', () => ({
@@ -63,6 +75,7 @@ const reviewId = '507f1f77bcf86cd799439013';
 
 function createReviewDocument() {
   const document = {
+    _id: new Types.ObjectId(reviewId),
     id: reviewId,
     rating: 5,
     comment: 'Clear instructions and an excellent result.',
@@ -97,8 +110,9 @@ describe('review service', () => {
 
   it('creates one review for another cook published recipe', async () => {
     const review = createReviewDocument();
-    selectRecipeMock.mockResolvedValue({ author: new Types.ObjectId() });
-    createReviewMock.mockResolvedValue(review);
+    const authorId = new Types.ObjectId();
+    selectRecipeMock.mockResolvedValue({ author: authorId });
+    createReviewMock.mockResolvedValue([review]);
 
     const result = await createReview(
       recipeId,
@@ -113,11 +127,23 @@ describe('review service', () => {
       _id: new Types.ObjectId(recipeId),
       status: 'published',
     });
-    expect(createReviewMock).toHaveBeenCalledWith({
-      recipe: new Types.ObjectId(recipeId),
-      user: new Types.ObjectId(userId),
-      rating: 5,
-      comment: 'Clear instructions and an excellent result.',
+    expect(createReviewMock).toHaveBeenCalledWith(
+      [
+        {
+          recipe: new Types.ObjectId(recipeId),
+          user: new Types.ObjectId(userId),
+          rating: 5,
+          comment: 'Clear instructions and an excellent result.',
+        },
+      ],
+      { session: expect.any(Object) },
+    );
+    expect(createReviewNotificationMock).toHaveBeenCalledWith({
+      recipientId: authorId,
+      actorId: userId,
+      recipeId: new Types.ObjectId(recipeId),
+      reviewId: new Types.ObjectId(reviewId),
+      session: expect.any(Object),
     });
     expect(result).toMatchObject({ id: reviewId, rating: 5, user: { username: 'amina_kitchen' } });
   });
@@ -219,6 +245,10 @@ describe('review service', () => {
       { session: expect.any(Object) },
     );
     expect(deleteReportsMock).toHaveBeenCalledWith(
+      { review: new Types.ObjectId(reviewId) },
+      { session: expect.any(Object) },
+    );
+    expect(deleteNotificationsMock).toHaveBeenCalledWith(
       { review: new Types.ObjectId(reviewId) },
       { session: expect.any(Object) },
     );

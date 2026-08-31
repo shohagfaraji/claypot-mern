@@ -3,24 +3,39 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   aggregateReportsMock,
+  createReportNotificationMock,
   createReportMock,
+  endSessionMock,
   findRecipeMock,
   findReportAndUpdateMock,
   findReviewMock,
   reportExistsMock,
+  reportExistsSessionMock,
   recipeExistsMock,
   selectRecipeMock,
   selectReviewMock,
+  startSessionMock,
+  withTransactionMock,
 } = vi.hoisted(() => ({
   aggregateReportsMock: vi.fn(),
+  createReportNotificationMock: vi.fn(),
   createReportMock: vi.fn(),
+  endSessionMock: vi.fn(),
   findRecipeMock: vi.fn(),
   findReportAndUpdateMock: vi.fn(),
   findReviewMock: vi.fn(),
   reportExistsMock: vi.fn(),
+  reportExistsSessionMock: vi.fn(),
   recipeExistsMock: vi.fn(),
   selectRecipeMock: vi.fn(),
   selectReviewMock: vi.fn(),
+  startSessionMock: vi.fn(),
+  withTransactionMock: vi.fn(),
+}));
+
+vi.mock('mongoose', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('mongoose')>()),
+  startSession: startSessionMock,
 }));
 
 vi.mock('../../src/models/content-report.model.js', async (importOriginal) => ({
@@ -37,6 +52,9 @@ vi.mock('../../src/models/recipe.model.js', () => ({
 }));
 vi.mock('../../src/models/review.model.js', () => ({
   ReviewModel: { findById: findReviewMock },
+}));
+vi.mock('../../src/services/notification.service.js', () => ({
+  createReportNotification: createReportNotificationMock,
 }));
 
 import {
@@ -55,6 +73,14 @@ describe('content report service', () => {
     vi.resetAllMocks();
     findRecipeMock.mockReturnValue({ select: selectRecipeMock });
     findReviewMock.mockReturnValue({ select: selectReviewMock });
+    startSessionMock.mockResolvedValue({
+      withTransaction: withTransactionMock,
+      endSession: endSessionMock,
+    });
+    withTransactionMock.mockImplementation(async (operation: () => Promise<unknown>) =>
+      operation(),
+    );
+    reportExistsMock.mockReturnValue({ session: reportExistsSessionMock });
     createReportMock.mockResolvedValue({
       id: 'report-id',
       createdAt: new Date('2026-08-28T08:00:00.000Z'),
@@ -176,7 +202,11 @@ describe('content report service', () => {
 
   it('records one final moderation decision', async () => {
     findReportAndUpdateMock.mockResolvedValue({
+      _id: new Types.ObjectId('507f1f77bcf86cd799439015'),
       id: 'report-id',
+      reporter: new Types.ObjectId(reporterId),
+      recipe: new Types.ObjectId(recipeId),
+      review: null,
       status: 'resolved',
       resolutionNote: 'The content was reviewed and appropriate action was completed.',
       reviewedAt: new Date('2026-08-28T09:00:00.000Z'),
@@ -196,11 +226,19 @@ describe('content report service', () => {
           reviewedBy: new Types.ObjectId(reporterId),
         }),
       },
-      { returnDocument: 'after' },
+      { returnDocument: 'after', session: expect.any(Object) },
     );
+    expect(createReportNotificationMock).toHaveBeenCalledWith({
+      recipientId: new Types.ObjectId(reporterId),
+      recipeId: new Types.ObjectId(recipeId),
+      reviewId: null,
+      reportId: new Types.ObjectId('507f1f77bcf86cd799439015'),
+      status: 'resolved',
+      session: expect.any(Object),
+    });
 
     findReportAndUpdateMock.mockResolvedValue(null);
-    reportExistsMock.mockResolvedValue({ _id: new Types.ObjectId() });
+    reportExistsSessionMock.mockResolvedValue({ _id: new Types.ObjectId() });
     await expect(
       reviewContentReport('507f1f77bcf86cd799439015', reporterId, {
         status: 'dismissed',
