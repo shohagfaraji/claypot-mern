@@ -1,4 +1,4 @@
-import { Types, type PipelineStage } from 'mongoose';
+import { startSession, Types, type PipelineStage } from 'mongoose';
 import { AppError } from '../errors/app-error.js';
 import { ContentReportModel } from '../models/content-report.model.js';
 import { RecipeModel } from '../models/recipe.model.js';
@@ -8,6 +8,7 @@ import type {
   ListContentReportsQuery,
   ReviewContentReportInput,
 } from '../schemas/report.schema.js';
+import { createReportNotification } from './notification.service.js';
 
 export interface CreatedContentReport {
   id: string;
@@ -227,32 +228,59 @@ export async function reviewContentReport(
   input: ReviewContentReportInput,
 ): Promise<ReviewedContentReport> {
   const reviewedAt = new Date();
-  const report = await ContentReportModel.findOneAndUpdate(
-    { _id: new Types.ObjectId(reportId), status: 'open' },
-    {
-      $set: {
+  const reportObjectId = new Types.ObjectId(reportId);
+  const session = await startSession();
+
+  try {
+    const report = await session.withTransaction(async () => {
+      const reviewedReport = await ContentReportModel.findOneAndUpdate(
+        { _id: reportObjectId, status: 'open' },
+        {
+          $set: {
+            status: input.status,
+            resolutionNote: input.note,
+            reviewedBy: new Types.ObjectId(reviewerId),
+            reviewedAt,
+          },
+        },
+        { returnDocument: 'after', session },
+      );
+
+      if (reviewedReport === null) {
+        const reportExists = await ContentReportModel.exists({ _id: reportObjectId }).session(
+          session,
+        );
+        if (reportExists === null) {
+          throw new AppError(404, 'REPORT_NOT_FOUND', 'The report could not be found.');
+        }
+
+        throw new AppError(
+          409,
+          'REPORT_ALREADY_REVIEWED',
+          'This report has already been reviewed.',
+        );
+      }
+
+      await createReportNotification({
+        recipientId: reviewedReport.reporter,
+        recipeId: reviewedReport.recipe,
+        reviewId: reviewedReport.review,
+        reportId: reviewedReport._id,
         status: input.status,
-        resolutionNote: input.note,
-        reviewedBy: new Types.ObjectId(reviewerId),
-        reviewedAt,
-      },
-    },
-    { returnDocument: 'after' },
-  );
+        session,
+      });
+      return reviewedReport;
+    });
 
-  if (report === null) {
-    const reportExists = await ContentReportModel.exists({ _id: new Types.ObjectId(reportId) });
-    if (reportExists === null) {
-      throw new AppError(404, 'REPORT_NOT_FOUND', 'The report could not be found.');
-    }
+    if (report === undefined) throw new Error('Report review did not complete.');
 
-    throw new AppError(409, 'REPORT_ALREADY_REVIEWED', 'This report has already been reviewed.');
+    return {
+      id: report.id,
+      status: report.status as ReviewedContentReport['status'],
+      resolutionNote: report.resolutionNote as string,
+      reviewedAt: report.reviewedAt as Date,
+    };
+  } finally {
+    await session.endSession();
   }
-
-  return {
-    id: report.id,
-    status: report.status as ReviewedContentReport['status'],
-    resolutionNote: report.resolutionNote as string,
-    reviewedAt: report.reviewedAt as Date,
-  };
 }

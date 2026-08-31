@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   deleteManagedImageAfterPersistenceMock,
+  deleteNotificationsMock,
   deleteReportsMock,
   deleteRecipeMock,
   deleteReviewsMock,
@@ -12,6 +13,7 @@ const {
   withTransactionMock,
 } = vi.hoisted(() => ({
   deleteManagedImageAfterPersistenceMock: vi.fn(),
+  deleteNotificationsMock: vi.fn(),
   deleteReportsMock: vi.fn(),
   deleteRecipeMock: vi.fn(),
   deleteReviewsMock: vi.fn(),
@@ -32,6 +34,10 @@ vi.mock('../../src/services/media.service.js', () => ({
 
 vi.mock('../../src/models/content-report.model.js', () => ({
   ContentReportModel: { deleteMany: deleteReportsMock },
+}));
+
+vi.mock('../../src/models/notification.model.js', () => ({
+  NotificationModel: { deleteMany: deleteNotificationsMock },
 }));
 
 vi.mock('../../src/models/recipe.model.js', () => ({
@@ -108,6 +114,10 @@ describe('recipe deletion', () => {
 
     const recipe = new Types.ObjectId(recipeId);
     expect(deleteReportsMock).toHaveBeenCalledWith({ recipe }, { session: expect.any(Object) });
+    expect(deleteNotificationsMock).toHaveBeenCalledWith(
+      { recipe },
+      { session: expect.any(Object) },
+    );
     expect(deleteReviewsMock).toHaveBeenCalledWith({ recipe }, { session: expect.any(Object) });
     expect(deleteSavedRecipesMock).toHaveBeenCalledWith(
       { recipe },
