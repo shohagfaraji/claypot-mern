@@ -5,6 +5,7 @@ import { hashRefreshToken } from '../lib/refresh-token.js';
 import { ContentReportModel } from '../models/content-report.model.js';
 import { EmailChangeTokenModel } from '../models/email-change-token.model.js';
 import { EmailVerificationTokenModel } from '../models/email-verification-token.model.js';
+import { FollowModel } from '../models/follow.model.js';
 import { PasswordResetTokenModel } from '../models/password-reset-token.model.js';
 import { NotificationModel } from '../models/notification.model.js';
 import { RecipeModel } from '../models/recipe.model.js';
@@ -106,6 +107,10 @@ export async function deleteAccount(
             { recipe: { $in: recipeIds } },
           ],
         },
+        { session },
+      );
+      await FollowModel.deleteMany(
+        { $or: [{ follower: userObjectId }, { following: userObjectId }] },
         { session },
       );
       await RecipeModel.deleteMany({ author: userObjectId }, { session });

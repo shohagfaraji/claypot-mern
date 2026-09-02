@@ -5,6 +5,7 @@ const {
   countAdminsMock,
   deleteEmailChangeTokensMock,
   deleteEmailVerificationTokensMock,
+  deleteFollowsMock,
   deleteManagedImageAfterPersistenceMock,
   deleteNotificationsMock,
   deletePasswordResetTokensMock,
@@ -27,6 +28,7 @@ const {
   countAdminsMock: vi.fn(),
   deleteEmailChangeTokensMock: vi.fn(),
   deleteEmailVerificationTokensMock: vi.fn(),
+  deleteFollowsMock: vi.fn(),
   deleteManagedImageAfterPersistenceMock: vi.fn(),
   deleteNotificationsMock: vi.fn(),
   deletePasswordResetTokensMock: vi.fn(),
@@ -64,6 +66,9 @@ vi.mock('../../src/models/email-change-token.model.js', () => ({
 }));
 vi.mock('../../src/models/email-verification-token.model.js', () => ({
   EmailVerificationTokenModel: { deleteMany: deleteEmailVerificationTokensMock },
+}));
+vi.mock('../../src/models/follow.model.js', () => ({
+  FollowModel: { deleteMany: deleteFollowsMock },
 }));
 vi.mock('../../src/models/password-reset-token.model.js', () => ({
   PasswordResetTokenModel: { deleteMany: deletePasswordResetTokensMock },
@@ -167,6 +172,10 @@ describe('account deletion service', () => {
       {
         $or: [{ recipient: ownerId }, { actor: ownerId }, { recipe: { $in: [recipeId] } }],
       },
+      sessionOptions,
+    );
+    expect(deleteFollowsMock).toHaveBeenCalledWith(
+      { $or: [{ follower: ownerId }, { following: ownerId }] },
       sessionOptions,
     );
     expect(deleteRecipesMock).toHaveBeenCalledWith({ author: ownerId }, sessionOptions);

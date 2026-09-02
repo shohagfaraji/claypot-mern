@@ -1,4 +1,8 @@
-export type NotificationType = 'review_created' | 'report_resolved' | 'report_dismissed';
+export type NotificationType =
+  | 'review_created'
+  | 'report_resolved'
+  | 'report_dismissed'
+  | 'cook_followed';
 
 export interface AppNotification {
   id: string;
@@ -15,7 +19,7 @@ export interface AppNotification {
     id: string;
     title: string;
     slug: string;
-  };
+  } | null;
 }
 
 export interface NotificationListData {

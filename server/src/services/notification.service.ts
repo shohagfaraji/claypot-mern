@@ -18,7 +18,7 @@ export interface PublicNotification {
     id: string;
     title: string;
     slug: string;
-  };
+  } | null;
 }
 
 export interface PaginatedNotifications {
@@ -45,6 +45,12 @@ interface CreateReportNotificationInput {
   reviewId: Types.ObjectId | null;
   reportId: Types.ObjectId;
   status: 'resolved' | 'dismissed';
+  session: ClientSession;
+}
+
+interface CreateFollowerNotificationInput {
+  recipientId: Types.ObjectId;
+  actorId: Types.ObjectId;
   session: ClientSession;
 }
 
@@ -91,6 +97,23 @@ export async function createReportNotification({
   );
 }
 
+export async function createFollowerNotification({
+  recipientId,
+  actorId,
+  session,
+}: CreateFollowerNotificationInput): Promise<void> {
+  await NotificationModel.create(
+    [
+      {
+        recipient: recipientId,
+        actor: actorId,
+        type: 'cook_followed',
+      },
+    ],
+    { session },
+  );
+}
+
 export async function listNotifications(
   userId: string,
   query: ListNotificationsQuery,
@@ -115,7 +138,6 @@ export async function listNotifications(
             },
           },
           { $lookup: { from: 'recipes', localField: 'recipe', foreignField: '_id', as: 'recipe' } },
-          { $unwind: '$recipe' },
           {
             $project: {
               _id: 0,
@@ -136,9 +158,15 @@ export async function listNotifications(
                 ],
               },
               recipe: {
-                id: { $toString: '$recipe._id' },
-                title: '$recipe.title',
-                slug: '$recipe.slug',
+                $cond: [
+                  { $gt: [{ $size: '$recipe' }, 0] },
+                  {
+                    id: { $toString: { $arrayElemAt: ['$recipe._id', 0] } },
+                    title: { $arrayElemAt: ['$recipe.title', 0] },
+                    slug: { $arrayElemAt: ['$recipe.slug', 0] },
+                  },
+                  null,
+                ],
               },
             },
           },

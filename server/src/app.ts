@@ -11,6 +11,7 @@ import { notFound } from './middleware/not-found.js';
 import { adminRouter } from './routes/admin.route.js';
 import { authRouter } from './routes/auth.route.js';
 import { healthRouter } from './routes/health.route.js';
+import { feedRouter, followRouter } from './routes/follow.route.js';
 import { mediaRouter } from './routes/media.route.js';
 import { notificationRouter } from './routes/notification.route.js';
 import { recipeRouter } from './routes/recipe.route.js';
@@ -48,6 +49,8 @@ export function createApp() {
   app.use(cookieParser());
 
   app.use('/api/v1/health', healthRouter);
+  app.use('/api/v1/feed', feedRouter);
+  app.use('/api/v1/follows', followRouter);
   app.use('/api/v1/admin', adminRouter);
   app.use('/api/v1/auth', authRouter);
   app.use('/api/v1/media', mediaRouter);

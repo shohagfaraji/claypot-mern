@@ -1,56 +1,49 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { getUserProfile } from '@/features/users/api/get-user-profile';
-import type { PublicUserProfile } from '@/features/users/types';
+import { getCookConnections } from '@/features/follows/api/follows';
+import type { CookConnectionListData, CookConnectionType } from '@/features/follows/types';
 import { ApiError } from '@/lib/api-client';
 
-interface UserProfileState {
+interface CookConnectionListState extends CookConnectionListData {
   requestKey: string | null;
-  user: PublicUserProfile | null;
   isLoading: boolean;
   error: string | null;
   isNotFound: boolean;
 }
 
-const initialState: UserProfileState = {
+const initialState: CookConnectionListState = {
   requestKey: null,
-  user: null,
+  cooks: [],
+  pagination: { page: 1, limit: 12, total: 0, totalPages: 0 },
   isLoading: true,
   error: null,
   isNotFound: false,
 };
 
-export function useUserProfile(username: string) {
+export function useCookConnections(
+  username: string,
+  connection: CookConnectionType,
+  queryString: string,
+) {
+  const requestKey = `${username}:${connection}:${queryString}`;
   const [state, setState] = useState(initialState);
   const [requestVersion, setRequestVersion] = useState(0);
-  const isCurrentRequest = state.requestKey === username;
+  const isCurrentRequest = state.requestKey === requestKey;
 
   const retry = useCallback(() => {
     setState((current) => ({ ...current, isLoading: true, error: null }));
     setRequestVersion((version) => version + 1);
   }, []);
 
-  const adjustFollowerCount = useCallback((change: number) => {
-    setState((current) => ({
-      ...current,
-      user:
-        current.user === null
-          ? null
-          : {
-              ...current.user,
-              followerCount: Math.max(0, current.user.followerCount + change),
-            },
-    }));
-  }, []);
-
   useEffect(() => {
     const controller = new AbortController();
 
-    void getUserProfile(username, controller.signal)
-      .then((user) => {
+    void getCookConnections(username, connection, queryString, controller.signal)
+      .then(({ cooks, pagination }) => {
         setState({
-          requestKey: username,
-          user,
+          requestKey,
+          cooks,
+          pagination,
           isLoading: false,
           error: null,
           isNotFound: false,
@@ -58,25 +51,25 @@ export function useUserProfile(username: string) {
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
-
         setState({
-          requestKey: username,
-          user: null,
+          requestKey,
+          cooks: [],
+          pagination: initialState.pagination,
           isLoading: false,
-          error: error instanceof Error ? error.message : 'The cook profile could not be loaded.',
+          error: error instanceof Error ? error.message : 'Cook connections could not be loaded.',
           isNotFound: error instanceof ApiError && error.status === 404,
         });
       });
 
     return () => controller.abort();
-  }, [requestVersion, username]);
+  }, [connection, queryString, requestKey, requestVersion, username]);
 
   return {
-    user: isCurrentRequest ? state.user : null,
+    cooks: isCurrentRequest ? state.cooks : [],
+    pagination: isCurrentRequest ? state.pagination : initialState.pagination,
     isLoading: !isCurrentRequest || state.isLoading,
     error: isCurrentRequest ? state.error : null,
     isNotFound: isCurrentRequest && state.isNotFound,
     retry,
-    adjustFollowerCount,
   };
 }

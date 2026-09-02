@@ -21,6 +21,7 @@ vi.mock('../../src/models/notification.model.js', () => ({
 }));
 
 import {
+  createFollowerNotification,
   createReportNotification,
   createReviewNotification,
   getUnreadNotificationCount,
@@ -83,6 +84,25 @@ describe('notification service', () => {
           recipe: recipeId,
           review: null,
           report: reportId,
+        },
+      ],
+      { session },
+    );
+  });
+
+  it('creates new-follower activity without requiring a recipe', async () => {
+    await createFollowerNotification({
+      recipientId: new Types.ObjectId(userId),
+      actorId: new Types.ObjectId(actorId),
+      session,
+    });
+
+    expect(createMock).toHaveBeenCalledWith(
+      [
+        {
+          recipient: new Types.ObjectId(userId),
+          actor: new Types.ObjectId(actorId),
+          type: 'cook_followed',
         },
       ],
       { session },

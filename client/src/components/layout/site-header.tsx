@@ -6,6 +6,7 @@ import {
   Menu,
   Search,
   UserRound,
+  UsersRound,
   X,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -75,6 +76,10 @@ export function SiteHeader() {
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
+              </Link>
+              <Link className={buttonVariants({ variant: 'ghost', size: 'lg' })} to="/following">
+                <UsersRound />
+                Following
               </Link>
               <Link
                 className={buttonVariants({ variant: 'ghost', size: 'lg' })}
@@ -162,6 +167,14 @@ export function SiteHeader() {
                         {unreadCount > 99 ? '99+' : unreadCount}
                       </span>
                     )}
+                  </Link>
+                  <Link
+                    className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}
+                    to="/following"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <UsersRound />
+                    Following feed
                   </Link>
                   <Link
                     className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}

@@ -1,9 +1,17 @@
-import { BookOpen, CalendarDays, RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
+import {
+  BookOpen,
+  CalendarDays,
+  RefreshCw,
+  Search,
+  SlidersHorizontal,
+  UserPlus,
+  UsersRound,
+} from 'lucide-react';
 import type { SubmitEvent } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 
 import { AppShell } from '@/components/layout/app-shell';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -13,10 +21,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/features/auth/hooks/use-auth';
+import { FollowCookButton } from '@/features/follows/components/follow-cook-button';
 import { RecipeGrid } from '@/features/recipes/components/recipe-grid';
 import { useUserProfile } from '@/features/users/hooks/use-user-profile';
 import { useUserRecipes } from '@/features/users/hooks/use-user-recipes';
 import { getInitials } from '@/lib/get-initials';
+import { cn } from '@/lib/utils';
 import { NotFoundPage } from '@/pages/not-found-page';
 
 const difficulties = ['easy', 'medium', 'hard'] as const;
@@ -48,6 +59,8 @@ function ProfileHeaderSkeleton() {
 
 export function UserProfilePage() {
   const { username = '' } = useParams();
+  const location = useLocation();
+  const { status, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get('search')?.trim() ?? '';
   const difficultyParam = searchParams.get('difficulty');
@@ -127,7 +140,7 @@ export function UserProfilePage() {
                 getInitials(profile.user.name)
               )}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-xs font-bold tracking-[0.14em] text-primary uppercase">
                 Claypot cook
               </p>
@@ -146,12 +159,55 @@ export function UserProfilePage() {
                     ? 'published recipe'
                     : 'published recipes'}
                 </span>
+                <Link
+                  className="inline-flex items-center gap-2 transition-colors hover:text-foreground"
+                  to={`/cooks/${profile.user.username}/followers`}
+                >
+                  <UsersRound className="size-4 text-primary" />
+                  {profile.user.followerCount}{' '}
+                  {profile.user.followerCount === 1 ? 'follower' : 'followers'}
+                </Link>
+                <Link
+                  className="inline-flex items-center gap-2 transition-colors hover:text-foreground"
+                  to={`/cooks/${profile.user.username}/following`}
+                >
+                  <UserPlus className="size-4 text-primary" />
+                  {profile.user.followingCount} following
+                </Link>
                 <span className="inline-flex items-center gap-2">
                   <CalendarDays className="size-4 text-primary" />
                   Joined {dateFormatter.format(new Date(profile.user.createdAt))}
                 </span>
               </div>
             </div>
+
+            {user?.id !== profile.user.id && (
+              <div className="shrink-0 sm:self-start">
+                {status === 'authenticated' ? (
+                  <FollowCookButton
+                    userId={profile.user.id}
+                    name={profile.user.name}
+                    onFollowChange={(isFollowing) =>
+                      profile.adjustFollowerCount(isFollowing ? 1 : -1)
+                    }
+                  />
+                ) : status === 'unauthenticated' ? (
+                  <Link
+                    className={cn(buttonVariants(), 'w-full sm:w-auto')}
+                    to="/login"
+                    state={{ from: `${location.pathname}${location.search}${location.hash}` }}
+                  >
+                    <UserPlus />
+                    Sign in to follow
+                  </Link>
+                ) : (
+                  <Button disabled>
+                    <RefreshCw className="animate-spin" />
+                    Checking session…
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </section>
       )}

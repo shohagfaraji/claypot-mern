@@ -7,6 +7,7 @@ import {
   LoaderCircle,
   MessageSquareText,
   RefreshCw,
+  UserPlus,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -48,27 +49,35 @@ function getPage(value: string | null) {
 }
 
 function getNotificationCopy(notification: AppNotification) {
+  if (notification.type === 'cook_followed') {
+    return {
+      title: `${notification.actor?.name ?? 'A cook'} started following you`,
+      description: 'They can now find your latest published recipes in their following feed.',
+    };
+  }
+
   if (notification.type === 'review_created') {
     return {
       title: `${notification.actor?.name ?? 'A cook'} reviewed your recipe`,
-      description: `A new review was added to “${notification.recipe.title}”.`,
+      description: `A new review was added to “${notification.recipe?.title ?? 'your recipe'}”.`,
     };
   }
 
   if (notification.type === 'report_resolved') {
     return {
       title: 'Your content report was resolved',
-      description: `An administrator completed the review of your report concerning “${notification.recipe.title}”.`,
+      description: `An administrator completed the review of your report concerning “${notification.recipe?.title ?? 'reported content'}”.`,
     };
   }
 
   return {
     title: 'Your content report was dismissed',
-    description: `An administrator reviewed your report concerning “${notification.recipe.title}” and closed it without further action.`,
+    description: `An administrator reviewed your report concerning “${notification.recipe?.title ?? 'reported content'}” and closed it without further action.`,
   };
 }
 
 function NotificationIcon({ type }: { type: AppNotification['type'] }) {
+  if (type === 'cook_followed') return <UserPlus />;
   if (type === 'review_created') return <MessageSquareText />;
   return type === 'report_resolved' ? <CircleCheck /> : <CircleX />;
 }
@@ -183,7 +192,7 @@ export function NotificationsPage() {
               Notifications
             </h1>
             <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
-              Keep track of new feedback on your recipes and updates to content reports.
+              Keep track of new followers, recipe feedback, and updates to content reports.
             </p>
           </div>
 
@@ -276,6 +285,14 @@ export function NotificationsPage() {
               {notificationList.notifications.map((notification) => {
                 const copy = getNotificationCopy(notification);
                 const isUnread = notification.readAt === null;
+                const destination =
+                  notification.type === 'cook_followed' && notification.actor
+                    ? `/cooks/${notification.actor.username}`
+                    : notification.recipe
+                      ? `/recipes/${notification.recipe.slug}`
+                      : '/notifications';
+                const destinationLabel =
+                  notification.type === 'cook_followed' ? 'View cook' : 'View recipe';
 
                 return (
                   <Card
@@ -284,7 +301,7 @@ export function NotificationsPage() {
                   >
                     <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-start">
                       <div className="relative shrink-0">
-                        {notification.type === 'review_created' && notification.actor ? (
+                        {notification.actor ? (
                           <div className="grid size-11 place-items-center overflow-hidden rounded-full bg-secondary text-xs font-bold text-primary">
                             {notification.actor.avatarUrl ? (
                               <img
@@ -341,10 +358,10 @@ export function NotificationsPage() {
                         )}
                         <Link
                           className={buttonVariants({ variant: 'outline', size: 'sm' })}
-                          to={`/recipes/${notification.recipe.slug}`}
+                          to={destination}
                         >
                           <ExternalLink />
-                          View recipe
+                          {destinationLabel}
                         </Link>
                       </div>
                     </CardContent>

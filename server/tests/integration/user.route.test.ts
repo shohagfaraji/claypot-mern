@@ -38,6 +38,8 @@ describe('GET /api/v1/users/:username', () => {
       bio: 'Home cook and recipe collector.',
       createdAt: new Date('2026-07-27T08:00:00.000Z'),
       publishedRecipeCount: 7,
+      followerCount: 18,
+      followingCount: 6,
     });
 
     const response = await request(app).get('/api/v1/users/Amina_Kitchen').expect(200);
@@ -46,6 +48,8 @@ describe('GET /api/v1/users/:username', () => {
     expect(response.body.data.user).toMatchObject({
       username: 'amina_kitchen',
       publishedRecipeCount: 7,
+      followerCount: 18,
+      followingCount: 6,
     });
     expect(response.body.data.user).not.toHaveProperty('email');
     expect(response.body.data.user).not.toHaveProperty('role');

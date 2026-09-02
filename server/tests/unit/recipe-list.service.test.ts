@@ -172,4 +172,19 @@ describe('published recipe listing', () => {
       },
     });
   });
+
+  it('can scope published recipes to followed authors', async () => {
+    const authorIds = ['507f1f77bcf86cd799439011', '507f1f77bcf86cd799439012'];
+    aggregateRecipesMock.mockResolvedValue([]);
+
+    await listPublishedRecipes(defaultQuery, authorIds);
+
+    const pipeline = aggregateRecipesMock.mock.calls[0]?.[0] as Array<Record<string, unknown>>;
+    expect(pipeline[0]).toEqual({
+      $match: {
+        status: 'published',
+        author: { $in: authorIds.map((id) => new Types.ObjectId(id)) },
+      },
+    });
+  });
 });

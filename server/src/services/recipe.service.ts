@@ -200,13 +200,15 @@ function getRecipeSort(sort: ListRecipesQuery['sort']): Record<string, 1 | -1> {
 
 export async function listPublishedRecipes(
   query: ListRecipesQuery,
-  authorId?: string,
+  authorId?: string | string[],
 ): Promise<PaginatedRecipes> {
   const match: Record<string, unknown> = {
     status: 'published',
   };
 
-  if (authorId !== undefined) {
+  if (Array.isArray(authorId)) {
+    match.author = { $in: authorId.map((id) => new Types.ObjectId(id)) };
+  } else if (authorId !== undefined) {
     match.author = new Types.ObjectId(authorId);
   }
 

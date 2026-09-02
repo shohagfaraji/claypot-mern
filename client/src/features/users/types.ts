@@ -8,6 +8,8 @@ export interface PublicUserProfile {
   bio: string | null;
   createdAt: string;
   publishedRecipeCount: number;
+  followerCount: number;
+  followingCount: number;
 }
 
 export type UserRecipeListData = RecipeListData;

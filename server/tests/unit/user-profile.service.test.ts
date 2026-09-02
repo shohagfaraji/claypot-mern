@@ -1,9 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { countRecipesMock, findUserMock, selectUserMock } = vi.hoisted(() => ({
+const { countFollowersMock, countRecipesMock, findUserMock, selectUserMock } = vi.hoisted(() => ({
+  countFollowersMock: vi.fn(),
   countRecipesMock: vi.fn(),
   findUserMock: vi.fn(),
   selectUserMock: vi.fn(),
+}));
+
+vi.mock('../../src/models/follow.model.js', () => ({
+  FollowModel: { countDocuments: countFollowersMock },
 }));
 
 vi.mock('../../src/models/recipe.model.js', () => ({
@@ -38,6 +43,7 @@ describe('public user profile service', () => {
       createdAt,
     });
     countRecipesMock.mockResolvedValue(7);
+    countFollowersMock.mockResolvedValueOnce(18).mockResolvedValueOnce(6);
 
     await expect(getPublicUserProfile('amina_kitchen')).resolves.toEqual({
       id: 'user-id',
@@ -47,6 +53,8 @@ describe('public user profile service', () => {
       bio: 'Home cook and recipe collector.',
       createdAt,
       publishedRecipeCount: 7,
+      followerCount: 18,
+      followingCount: 6,
     });
     expect(findUserMock).toHaveBeenCalledWith({ username: 'amina_kitchen' });
     expect(selectUserMock).toHaveBeenCalledWith('name username avatarUrl bio createdAt');
@@ -54,6 +62,8 @@ describe('public user profile service', () => {
       author: 'user-object-id',
       status: 'published',
     });
+    expect(countFollowersMock).toHaveBeenNthCalledWith(1, { following: 'user-object-id' });
+    expect(countFollowersMock).toHaveBeenNthCalledWith(2, { follower: 'user-object-id' });
   });
 
   it('returns only the user ID when loading their recipe collection', async () => {
@@ -62,6 +72,7 @@ describe('public user profile service', () => {
     await expect(getPublicUserId('amina_kitchen')).resolves.toBe('user-id');
     expect(selectUserMock).toHaveBeenCalledWith('_id');
     expect(countRecipesMock).not.toHaveBeenCalled();
+    expect(countFollowersMock).not.toHaveBeenCalled();
   });
 
   it('returns the same not-found response for missing profile resources', async () => {

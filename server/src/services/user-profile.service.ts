@@ -1,4 +1,5 @@
 import { AppError } from '../errors/app-error.js';
+import { FollowModel } from '../models/follow.model.js';
 import { RecipeModel } from '../models/recipe.model.js';
 import { UserModel } from '../models/user.model.js';
 
@@ -10,6 +11,8 @@ export interface PublicUserProfile {
   bio: string | null;
   createdAt: Date;
   publishedRecipeCount: number;
+  followerCount: number;
+  followingCount: number;
 }
 
 export async function getPublicUserProfile(username: string): Promise<PublicUserProfile> {
@@ -21,10 +24,11 @@ export async function getPublicUserProfile(username: string): Promise<PublicUser
     throw new AppError(404, 'USER_NOT_FOUND', 'Cook profile was not found.');
   }
 
-  const publishedRecipeCount = await RecipeModel.countDocuments({
-    author: user._id,
-    status: 'published',
-  });
+  const [publishedRecipeCount, followerCount, followingCount] = await Promise.all([
+    RecipeModel.countDocuments({ author: user._id, status: 'published' }),
+    FollowModel.countDocuments({ following: user._id }),
+    FollowModel.countDocuments({ follower: user._id }),
+  ]);
 
   return {
     id: user.id,
@@ -34,6 +38,8 @@ export async function getPublicUserProfile(username: string): Promise<PublicUser
     bio: user.bio,
     createdAt: user.createdAt,
     publishedRecipeCount,
+    followerCount,
+    followingCount,
   };
 }
 

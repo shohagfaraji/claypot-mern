@@ -89,3 +89,9 @@ export const contentReportRateLimit = createRateLimiter({
   limit: env.CONTENT_REPORT_RATE_LIMIT_MAX,
   key: 'account',
 });
+
+export const followActionRateLimit = createRateLimiter({
+  identifier: 'follow-action',
+  limit: env.FOLLOW_ACTION_RATE_LIMIT_MAX,
+  key: 'account',
+});

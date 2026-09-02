@@ -27,10 +27,19 @@ const CreateRecipePage = lazy(async () => ({
 const ConfirmEmailChangePage = lazy(async () => ({
   default: (await import('@/pages/confirm-email-change-page')).ConfirmEmailChangePage,
 }));
+const CookFollowersPage = lazy(async () => ({
+  default: (await import('@/pages/cook-connections-page')).CookFollowersPage,
+}));
+const CookFollowingPage = lazy(async () => ({
+  default: (await import('@/pages/cook-connections-page')).CookFollowingPage,
+}));
 const HomePage = lazy(async () => ({ default: (await import('@/pages/home-page')).HomePage }));
 const LoginPage = lazy(async () => ({ default: (await import('@/pages/login-page')).LoginPage }));
 const ForgotPasswordPage = lazy(async () => ({
   default: (await import('@/pages/forgot-password-page')).ForgotPasswordPage,
+}));
+const FollowingFeedPage = lazy(async () => ({
+  default: (await import('@/pages/following-feed-page')).FollowingFeedPage,
 }));
 const MyRecipesPage = lazy(async () => ({
   default: (await import('@/pages/my-recipes-page')).MyRecipesPage,
@@ -89,6 +98,8 @@ function App() {
         <Route path="recipes" element={<RecipesPage />} />
         <Route path="recipes/:slug" element={<RecipeDetailPage />} />
         <Route path="cooks/:username" element={<UserProfilePage />} />
+        <Route path="cooks/:username/followers" element={<CookFollowersPage />} />
+        <Route path="cooks/:username/following" element={<CookFollowingPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<AdminRoute />}>
             <Route element={<AdminLayout />}>
@@ -100,6 +111,7 @@ function App() {
           </Route>
           <Route path="account" element={<AccountPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="following" element={<FollowingFeedPage />} />
           <Route path="my-recipes" element={<MyRecipesPage />} />
           <Route path="saved-recipes" element={<SavedRecipesPage />} />
           <Route path="recipes/new" element={<CreateRecipePage />} />

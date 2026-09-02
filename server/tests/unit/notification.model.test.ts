@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { NotificationModel } from '../../src/models/notification.model.js';
 
 describe('Notification model', () => {
-  it('accepts review and report activity with unread defaults', async () => {
+  it('accepts review, report, and follower activity with unread defaults', async () => {
     const reviewNotification = new NotificationModel({
       recipient: new Types.ObjectId(),
       actor: new Types.ObjectId(),
@@ -17,19 +17,24 @@ describe('Notification model', () => {
       recipe: new Types.ObjectId(),
       report: new Types.ObjectId(),
     });
+    const followerNotification = new NotificationModel({
+      recipient: new Types.ObjectId(),
+      actor: new Types.ObjectId(),
+      type: 'cook_followed',
+    });
 
     await expect(reviewNotification.validate()).resolves.toBeUndefined();
     await expect(reportNotification.validate()).resolves.toBeUndefined();
+    await expect(followerNotification.validate()).resolves.toBeUndefined();
     expect(reviewNotification.readAt).toBeNull();
     expect(reportNotification.actor).toBeNull();
   });
 
-  it('requires the shared recipient, type, and recipe fields', async () => {
+  it('requires the shared recipient and type fields', async () => {
     await expect(new NotificationModel({}).validate()).rejects.toMatchObject({
       errors: {
         recipient: expect.any(Object),
         type: expect.any(Object),
-        recipe: expect.any(Object),
       },
     });
   });
@@ -45,12 +50,19 @@ describe('Notification model', () => {
       type: 'report_dismissed',
       recipe: new Types.ObjectId(),
     });
+    const followerNotification = new NotificationModel({
+      recipient: new Types.ObjectId(),
+      type: 'cook_followed',
+    });
 
     await expect(reviewNotification.validate()).rejects.toMatchObject({
       errors: { actor: expect.any(Object), review: expect.any(Object) },
     });
     await expect(reportNotification.validate()).rejects.toMatchObject({
       errors: { report: expect.any(Object) },
+    });
+    await expect(followerNotification.validate()).rejects.toMatchObject({
+      errors: { actor: expect.any(Object) },
     });
   });
 
