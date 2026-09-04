@@ -3,6 +3,7 @@ import { model, Schema, type Types } from 'mongoose';
 export interface SavedRecipe {
   user: Types.ObjectId;
   recipe: Types.ObjectId;
+  collections: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -19,6 +20,10 @@ const savedRecipeSchema = new Schema<SavedRecipe>(
       ref: 'Recipe',
       required: true,
     },
+    collections: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'RecipeCollection' }],
+      default: [],
+    },
   },
   {
     collection: 'saved_recipes',
@@ -29,5 +34,6 @@ const savedRecipeSchema = new Schema<SavedRecipe>(
 
 savedRecipeSchema.index({ user: 1, recipe: 1 }, { unique: true });
 savedRecipeSchema.index({ user: 1, createdAt: -1 });
+savedRecipeSchema.index({ user: 1, collections: 1, createdAt: -1 });
 
 export const SavedRecipeModel = model<SavedRecipe>('SavedRecipe', savedRecipeSchema);

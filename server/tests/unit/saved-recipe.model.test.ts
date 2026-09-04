@@ -10,6 +10,7 @@ describe('Saved recipe model', () => {
     });
 
     await expect(savedRecipe.validate()).resolves.toBeUndefined();
+    expect(savedRecipe.collections).toEqual([]);
   });
 
   it('requires both references', async () => {
@@ -28,6 +29,7 @@ describe('Saved recipe model', () => {
       expect.arrayContaining([
         [{ user: 1, recipe: 1 }, expect.objectContaining({ unique: true })],
         [{ user: 1, createdAt: -1 }, expect.any(Object)],
+        [{ user: 1, collections: 1, createdAt: -1 }, expect.any(Object)],
       ]),
     );
   });

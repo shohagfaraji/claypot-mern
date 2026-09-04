@@ -79,11 +79,17 @@ export function useSavedRecipeStatus(recipeId: string, enabled: boolean) {
     }
   }, [isCurrentRequest, recipeId, request, state.isLoading, state.isSaved, state.isUpdating]);
 
+  const markSaved = useCallback(() => {
+    if (!isCurrentRequest) return;
+    setState((current) => ({ ...current, isSaved: true, error: null }));
+  }, [isCurrentRequest]);
+
   return {
     isSaved: isCurrentRequest && state.isSaved,
     isLoading: enabled && !isCurrentRequest ? true : state.isLoading,
     isUpdating: isCurrentRequest && state.isUpdating,
     error: isCurrentRequest ? state.error : null,
     toggle,
+    markSaved,
   };
 }

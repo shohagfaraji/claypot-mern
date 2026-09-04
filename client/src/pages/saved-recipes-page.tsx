@@ -1,9 +1,9 @@
-import { Bookmark, Search, SlidersHorizontal } from 'lucide-react';
+import { Bookmark, FolderHeart, Search, SlidersHorizontal } from 'lucide-react';
 import { useState, type SubmitEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import { AppShell } from '@/components/layout/app-shell';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -13,9 +13,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAuthenticatedRequest } from '@/features/auth/hooks/use-authenticated-request';
+import { RecipeCollectionPicker } from '@/features/collections/components/recipe-collection-picker';
 import { unsaveRecipe } from '@/features/recipes/api/unsave-recipe';
 import { RecipeGrid } from '@/features/recipes/components/recipe-grid';
 import { useSavedRecipes } from '@/features/recipes/hooks/use-saved-recipes';
+import { cn } from '@/lib/utils';
 
 const difficulties = ['easy', 'medium', 'hard'] as const;
 const sortOptions = ['saved', 'newest', 'quickest'] as const;
@@ -36,6 +38,10 @@ export function SavedRecipesPage() {
   const page = getPage(searchParams.get('page'));
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
+  const [organizingRecipe, setOrganizingRecipe] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   const query = new URLSearchParams({ page: String(page), limit: '9', sort });
   if (search) query.set('search', search);
@@ -96,17 +102,27 @@ export function SavedRecipesPage() {
   return (
     <AppShell>
       <section className="border-b bg-card/45">
-        <div className="mx-auto w-full max-w-7xl px-5 py-12 sm:px-8 sm:py-16 lg:px-10">
-          <p className="flex items-center gap-2 text-xs font-bold tracking-[0.14em] text-primary uppercase">
-            <Bookmark className="size-4" />
-            Your collection
-          </p>
-          <h1 className="mt-3 font-serif text-5xl font-medium tracking-[-0.045em] sm:text-6xl">
-            Saved recipes
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-            Keep inspiration close and return to the recipes you want to cook next.
-          </p>
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-7 px-5 py-12 sm:px-8 sm:py-16 lg:flex-row lg:items-end lg:justify-between lg:px-10">
+          <div>
+            <p className="flex items-center gap-2 text-xs font-bold tracking-[0.14em] text-primary uppercase">
+              <Bookmark className="size-4" />
+              Your recipe library
+            </p>
+            <h1 className="mt-3 font-serif text-5xl font-medium tracking-[-0.045em] sm:text-6xl">
+              All saved recipes
+            </h1>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
+              Keep inspiration close, then organize recipes into collections that fit the way you
+              cook.
+            </p>
+          </div>
+          <Link
+            className={cn(buttonVariants({ variant: 'outline' }), 'shrink-0')}
+            to="/collections"
+          >
+            <FolderHeart />
+            View collections
+          </Link>
         </div>
       </section>
 
@@ -201,6 +217,7 @@ export function SavedRecipesPage() {
             error={error}
             onRetry={retry}
             onRemove={(recipe) => void handleRemove(recipe.id)}
+            onOrganize={(recipe) => setOrganizingRecipe({ id: recipe.id, title: recipe.title })}
             removingId={removingId}
             emptyTitle={hasFilters ? 'No saved recipes match' : 'Your saved collection is empty'}
             emptyDescription={
@@ -233,6 +250,18 @@ export function SavedRecipesPage() {
           </nav>
         )}
       </section>
+
+      {organizingRecipe && (
+        <RecipeCollectionPicker
+          recipeId={organizingRecipe.id}
+          recipeTitle={organizingRecipe.title}
+          open
+          showTrigger={false}
+          onOpenChange={(open) => {
+            if (!open) setOrganizingRecipe(null);
+          }}
+        />
+      )}
     </AppShell>
   );
 }

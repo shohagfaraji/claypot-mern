@@ -15,6 +15,8 @@ interface RecipeGridProps {
   skeletonCount?: number;
   removingId?: string | null;
   onRemove?: (recipe: RecipeListItem) => void;
+  removeLabel?: (recipe: RecipeListItem) => string;
+  onOrganize?: (recipe: RecipeListItem) => void;
 }
 
 function RecipeCardSkeleton() {
@@ -50,6 +52,8 @@ export function RecipeGrid({
   skeletonCount = 6,
   removingId = null,
   onRemove,
+  removeLabel,
+  onOrganize,
 }: RecipeGridProps) {
   if (isLoading) {
     return (
@@ -97,6 +101,8 @@ export function RecipeGrid({
           isRemoveDisabled={removingId !== null}
           isRemoving={removingId === recipe.id}
           onRemove={onRemove}
+          removeLabel={removeLabel?.(recipe)}
+          onOrganize={onOrganize}
         />
       ))}
     </div>

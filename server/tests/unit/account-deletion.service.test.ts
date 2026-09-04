@@ -9,6 +9,7 @@ const {
   deleteManagedImageAfterPersistenceMock,
   deleteNotificationsMock,
   deletePasswordResetTokensMock,
+  deleteRecipeCollectionsMock,
   deleteReportsMock,
   deleteRecipesMock,
   deleteRefreshSessionsMock,
@@ -32,6 +33,7 @@ const {
   deleteManagedImageAfterPersistenceMock: vi.fn(),
   deleteNotificationsMock: vi.fn(),
   deletePasswordResetTokensMock: vi.fn(),
+  deleteRecipeCollectionsMock: vi.fn(),
   deleteReportsMock: vi.fn(),
   deleteRecipesMock: vi.fn(),
   deleteRefreshSessionsMock: vi.fn(),
@@ -78,6 +80,9 @@ vi.mock('../../src/models/notification.model.js', () => ({
 }));
 vi.mock('../../src/models/recipe.model.js', () => ({
   RecipeModel: { find: findRecipesMock, deleteMany: deleteRecipesMock },
+}));
+vi.mock('../../src/models/recipe-collection.model.js', () => ({
+  RecipeCollectionModel: { deleteMany: deleteRecipeCollectionsMock },
 }));
 vi.mock('../../src/models/refresh-session.model.js', () => ({
   RefreshSessionModel: {
@@ -164,6 +169,7 @@ describe('account deletion service', () => {
       { $or: [{ user: ownerId }, { recipe: { $in: [recipeId] } }] },
       sessionOptions,
     );
+    expect(deleteRecipeCollectionsMock).toHaveBeenCalledWith({ user: ownerId }, sessionOptions);
     expect(deleteReportsMock).toHaveBeenCalledWith(
       { $or: [{ reporter: ownerId }, { targetAuthor: ownerId }] },
       sessionOptions,

@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+import { RecipeCollectionPicker } from '@/features/collections/components/recipe-collection-picker';
 import { useRecipe } from '@/features/recipes/hooks/use-recipe';
 import { useSavedRecipeStatus } from '@/features/recipes/hooks/use-saved-recipe-status';
 import { ReportContentDialog } from '@/features/reports/components/report-content-dialog';
@@ -135,29 +136,36 @@ export function RecipeDetailPage() {
                 <div className="mt-6">
                   <div className="flex flex-wrap gap-2">
                     {status === 'authenticated' ? (
-                      <Button
-                        type="button"
-                        variant={savedStatus.isSaved ? 'secondary' : 'outline'}
-                        disabled={savedStatus.isLoading || savedStatus.isUpdating}
-                        onClick={() => void savedStatus.toggle()}
-                      >
-                        {savedStatus.isLoading || savedStatus.isUpdating ? (
-                          <LoaderCircle className="animate-spin" />
-                        ) : savedStatus.isSaved ? (
-                          <BookmarkCheck />
-                        ) : (
-                          <Bookmark />
-                        )}
-                        {savedStatus.isLoading
-                          ? 'Checking collection…'
-                          : savedStatus.isUpdating
-                            ? savedStatus.isSaved
-                              ? 'Removing…'
-                              : 'Saving…'
-                            : savedStatus.isSaved
-                              ? 'Saved to collection'
-                              : 'Save recipe'}
-                      </Button>
+                      <>
+                        <Button
+                          type="button"
+                          variant={savedStatus.isSaved ? 'secondary' : 'outline'}
+                          disabled={savedStatus.isLoading || savedStatus.isUpdating}
+                          onClick={() => void savedStatus.toggle()}
+                        >
+                          {savedStatus.isLoading || savedStatus.isUpdating ? (
+                            <LoaderCircle className="animate-spin" />
+                          ) : savedStatus.isSaved ? (
+                            <BookmarkCheck />
+                          ) : (
+                            <Bookmark />
+                          )}
+                          {savedStatus.isLoading
+                            ? 'Checking saved status…'
+                            : savedStatus.isUpdating
+                              ? savedStatus.isSaved
+                                ? 'Removing…'
+                                : 'Saving…'
+                              : savedStatus.isSaved
+                                ? 'Saved recipe'
+                                : 'Save recipe'}
+                        </Button>
+                        <RecipeCollectionPicker
+                          recipeId={recipe.id}
+                          recipeTitle={recipe.title}
+                          onRecipeSaved={savedStatus.markSaved}
+                        />
+                      </>
                     ) : status === 'unauthenticated' ? (
                       <Link
                         className={buttonVariants({ variant: 'outline' })}

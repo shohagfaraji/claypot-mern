@@ -76,6 +76,7 @@ export async function isRecipeSaved(userId: string, recipeId: string): Promise<b
 export async function listSavedRecipes(
   userId: string,
   query: ListSavedRecipesQuery,
+  collectionId?: string,
 ): Promise<PaginatedSavedRecipes> {
   const recipeMatch: Record<string, unknown> = {
     'recipe.status': 'published',
@@ -110,8 +111,12 @@ export async function listSavedRecipes(
   }
 
   const skip = (query.page - 1) * query.limit;
+  const savedRecipeMatch: Record<string, unknown> = { user: new Types.ObjectId(userId) };
+  if (collectionId !== undefined) {
+    savedRecipeMatch.collections = new Types.ObjectId(collectionId);
+  }
   const pipeline: PipelineStage[] = [
-    { $match: { user: new Types.ObjectId(userId) } },
+    { $match: savedRecipeMatch },
     {
       $lookup: {
         from: 'recipes',
