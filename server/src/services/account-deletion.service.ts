@@ -9,6 +9,7 @@ import { FollowModel } from '../models/follow.model.js';
 import { PasswordResetTokenModel } from '../models/password-reset-token.model.js';
 import { NotificationModel } from '../models/notification.model.js';
 import { RecipeModel } from '../models/recipe.model.js';
+import { RecipeCollectionModel } from '../models/recipe-collection.model.js';
 import { RefreshSessionModel } from '../models/refresh-session.model.js';
 import { ReviewModel } from '../models/review.model.js';
 import { SavedRecipeModel } from '../models/saved-recipe.model.js';
@@ -95,6 +96,7 @@ export async function deleteAccount(
         { $or: [{ user: userObjectId }, { recipe: { $in: recipeIds } }] },
         { session },
       );
+      await RecipeCollectionModel.deleteMany({ user: userObjectId }, { session });
       await ContentReportModel.deleteMany(
         { $or: [{ reporter: userObjectId }, { targetAuthor: userObjectId }] },
         { session },

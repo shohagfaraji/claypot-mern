@@ -171,4 +171,19 @@ describe('saved recipes', () => {
       pagination: { page: 1, limit: 12, total: 0, totalPages: 0 },
     });
   });
+
+  it('scopes saved recipes to one custom collection', async () => {
+    aggregateMock.mockResolvedValue([]);
+    const collectionId = '507f1f77bcf86cd799439014';
+
+    await listSavedRecipes(userId, { page: 1, limit: 12, tags: [], sort: 'saved' }, collectionId);
+
+    const pipeline = aggregateMock.mock.calls[0]?.[0] as Array<Record<string, unknown>>;
+    expect(pipeline[0]).toEqual({
+      $match: {
+        user: new Types.ObjectId(userId),
+        collections: new Types.ObjectId(collectionId),
+      },
+    });
+  });
 });

@@ -1,4 +1,4 @@
-import { BookmarkX, Clock3, LoaderCircle, Star } from 'lucide-react';
+import { BookmarkX, Clock3, FolderPlus, LoaderCircle, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,8 @@ interface RecipeCardProps {
   isRemoveDisabled?: boolean;
   isRemoving?: boolean;
   onRemove?: (recipe: RecipeListItem) => void;
+  removeLabel?: string;
+  onOrganize?: (recipe: RecipeListItem) => void;
 }
 
 export function RecipeCard({
@@ -19,6 +21,8 @@ export function RecipeCard({
   isRemoveDisabled = false,
   isRemoving = false,
   onRemove,
+  removeLabel,
+  onOrganize,
 }: RecipeCardProps) {
   return (
     <Card className="group relative gap-0 overflow-hidden border-border/70 py-0 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/8">
@@ -68,18 +72,35 @@ export function RecipeCard({
         </span>
       </Link>
 
-      {onRemove && (
-        <Button
-          className="absolute top-4 right-4 z-10 shadow-sm"
-          type="button"
-          variant="secondary"
-          size="icon"
-          aria-label={`Remove ${recipe.title} from saved recipes`}
-          disabled={isRemoveDisabled || isRemoving}
-          onClick={() => onRemove(recipe)}
-        >
-          {isRemoving ? <LoaderCircle className="animate-spin" /> : <BookmarkX />}
-        </Button>
+      {(onOrganize || onRemove) && (
+        <div className="absolute top-4 right-4 z-10 flex gap-2">
+          {onOrganize && (
+            <Button
+              className="shadow-sm"
+              type="button"
+              variant="secondary"
+              size="icon"
+              aria-label={`Organize ${recipe.title} into collections`}
+              disabled={isRemoveDisabled || isRemoving}
+              onClick={() => onOrganize(recipe)}
+            >
+              <FolderPlus />
+            </Button>
+          )}
+          {onRemove && (
+            <Button
+              className="shadow-sm"
+              type="button"
+              variant="secondary"
+              size="icon"
+              aria-label={removeLabel ?? `Remove ${recipe.title} from saved recipes`}
+              disabled={isRemoveDisabled || isRemoving}
+              onClick={() => onRemove(recipe)}
+            >
+              {isRemoving ? <LoaderCircle className="animate-spin" /> : <BookmarkX />}
+            </Button>
+          )}
+        </div>
       )}
 
       <CardContent className="flex flex-1 flex-col p-5 sm:p-6">

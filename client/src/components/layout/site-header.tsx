@@ -1,7 +1,7 @@
 import {
   Bell,
-  Bookmark,
   BookOpen,
+  FolderHeart,
   LayoutDashboard,
   Menu,
   Search,
@@ -81,12 +81,9 @@ export function SiteHeader() {
                 <UsersRound />
                 Following
               </Link>
-              <Link
-                className={buttonVariants({ variant: 'ghost', size: 'lg' })}
-                to="/saved-recipes"
-              >
-                <Bookmark />
-                Saved
+              <Link className={buttonVariants({ variant: 'ghost', size: 'lg' })} to="/collections">
+                <FolderHeart />
+                Collections
               </Link>
               <Link className={buttonVariants({ variant: 'ghost', size: 'lg' })} to="/my-recipes">
                 <BookOpen />
@@ -178,11 +175,11 @@ export function SiteHeader() {
                   </Link>
                   <Link
                     className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}
-                    to="/saved-recipes"
+                    to="/collections"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    <Bookmark />
-                    Saved recipes
+                    <FolderHeart />
+                    Recipe collections
                   </Link>
                   <Link
                     className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}

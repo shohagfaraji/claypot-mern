@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
+import { ScrollToTop } from '@/components/layout/scroll-to-top';
 import { AuthProvider } from '@/features/auth/context/auth-provider';
 import { NotificationProvider } from '@/features/notifications/context/notification-provider';
 import App from './App';
@@ -11,6 +12,7 @@ createRoot(document.getElementById('root')!).render(
     <AuthProvider>
       <NotificationProvider>
         <BrowserRouter>
+          <ScrollToTop />
           <App />
         </BrowserRouter>
       </NotificationProvider>

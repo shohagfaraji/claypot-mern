@@ -82,8 +82,8 @@ export function AccountDeletion() {
                   Delete account
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Permanently remove your profile, recipes, reviews, saved recipes, uploaded images,
-                  and active sessions. This action cannot be undone.
+                  Permanently remove your profile, recipes, reviews, saved recipes, collections,
+                  uploaded images, and active sessions. This action cannot be undone.
                 </p>
               </div>
               <Button
