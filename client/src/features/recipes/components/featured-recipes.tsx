@@ -2,7 +2,7 @@ import { RecipeGrid } from '@/features/recipes/components/recipe-grid';
 import { useRecipes } from '@/features/recipes/hooks/use-recipes';
 
 export function FeaturedRecipes() {
-  const { recipes, isLoading, error, retry } = useRecipes('limit=3&sort=newest');
+  const { recipes, isLoading, error, retry } = useRecipes('limit=3&sort=popular');
 
   return (
     <div className="mt-10">

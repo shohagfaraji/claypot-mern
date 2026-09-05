@@ -43,11 +43,15 @@ describe('recipe listing query schema', () => {
     ).toEqual(['rice', 'quick', 'dinner']);
   });
 
+  it.each(['top-rated', 'popular'] as const)('accepts the %s discovery sort', (sort) => {
+    expect(listRecipesQuerySchema.parse({ sort }).sort).toBe(sort);
+  });
+
   it.each([
     ['page', { page: '0' }],
     ['limit', { limit: '25' }],
     ['difficulty', { difficulty: 'expert' }],
-    ['sort', { sort: 'popular' }],
+    ['sort', { sort: 'trending' }],
     ['unknown field', { author: 'user-id' }],
   ])('rejects an invalid %s', (_case, query) => {
     expect(listRecipesQuerySchema.safeParse(query).success).toBe(false);

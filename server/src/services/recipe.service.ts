@@ -193,9 +193,54 @@ function getRecipeSort(sort: ListRecipesQuery['sort']): Record<string, 1 | -1> {
     newest: { publishedAt: -1, _id: -1 },
     oldest: { publishedAt: 1, _id: 1 },
     quickest: { totalTimeMinutes: 1, publishedAt: -1 },
+    'top-rated': {
+      'reviewSummary.averageRating': -1,
+      'reviewSummary.reviewCount': -1,
+      publishedAt: -1,
+      _id: -1,
+    },
+    popular: {
+      'reviewSummary.reviewCount': -1,
+      'reviewSummary.averageRating': -1,
+      publishedAt: -1,
+      _id: -1,
+    },
   };
 
   return sorts[sort];
+}
+
+function reviewSummaryPipeline(): PipelineStage.FacetPipelineStage[] {
+  return [
+    {
+      $lookup: {
+        from: 'reviews',
+        let: { recipeId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ['$recipe', '$$recipeId'] },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              averageRating: { $avg: '$rating' },
+              reviewCount: { $sum: 1 },
+            },
+          },
+        ],
+        as: 'reviewSummary',
+      },
+    },
+    {
+      $set: {
+        reviewSummary: {
+          $ifNull: [{ $arrayElemAt: ['$reviewSummary', 0] }, { averageRating: 0, reviewCount: 0 }],
+        },
+      },
+    },
+  ];
 }
 
 export async function listPublishedRecipes(
@@ -233,6 +278,7 @@ export async function listPublishedRecipes(
   }
 
   const skip = (query.page - 1) * query.limit;
+  const ranksByReviews = query.sort === 'top-rated' || query.sort === 'popular';
   const pipeline: PipelineStage[] = [
     { $match: match },
     {
@@ -240,6 +286,7 @@ export async function listPublishedRecipes(
         totalTimeMinutes: { $add: ['$prepTimeMinutes', '$cookTimeMinutes'] },
       },
     },
+    ...(ranksByReviews ? reviewSummaryPipeline() : []),
     { $sort: getRecipeSort(query.sort) },
     {
       $facet: {
@@ -255,37 +302,7 @@ export async function listPublishedRecipes(
             },
           },
           { $unwind: '$authorProfile' },
-          {
-            $lookup: {
-              from: 'reviews',
-              let: { recipeId: '$_id' },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: { $eq: ['$recipe', '$$recipeId'] },
-                  },
-                },
-                {
-                  $group: {
-                    _id: null,
-                    averageRating: { $avg: '$rating' },
-                    reviewCount: { $sum: 1 },
-                  },
-                },
-              ],
-              as: 'reviewSummary',
-            },
-          },
-          {
-            $set: {
-              reviewSummary: {
-                $ifNull: [
-                  { $arrayElemAt: ['$reviewSummary', 0] },
-                  { averageRating: 0, reviewCount: 0 },
-                ],
-              },
-            },
-          },
+          ...(!ranksByReviews ? reviewSummaryPipeline() : []),
           {
             $project: {
               _id: 0,

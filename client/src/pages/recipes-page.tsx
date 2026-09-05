@@ -1,9 +1,9 @@
 import { Search, SlidersHorizontal } from 'lucide-react';
 import type { SubmitEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import { AppShell } from '@/components/layout/app-shell';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -12,15 +12,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useDiscoveryFacets } from '@/features/discovery/hooks/use-discovery-facets';
+import type { DiscoveryFacet } from '@/features/discovery/types';
 import { RecipeGrid } from '@/features/recipes/components/recipe-grid';
 import { useRecipes } from '@/features/recipes/hooks/use-recipes';
 
 const difficulties = ['easy', 'medium', 'hard'] as const;
-const sortOptions = ['newest', 'oldest', 'quickest'] as const;
+const sortOptions = ['newest', 'oldest', 'quickest', 'top-rated', 'popular'] as const;
 
 function getPage(value: string | null) {
   const page = Number(value);
   return Number.isInteger(page) && page > 0 ? page : 1;
+}
+
+function includeSelectedFacet(options: DiscoveryFacet[], selected: string) {
+  if (
+    selected === 'all' ||
+    options.some((option) => option.value.toLowerCase() === selected.toLowerCase())
+  ) {
+    return options;
+  }
+
+  return [{ value: selected, count: 0 }, ...options];
 }
 
 export function RecipesPage() {
@@ -30,14 +43,30 @@ export function RecipesPage() {
   const sortParam = searchParams.get('sort');
   const difficulty = difficulties.find((option) => option === difficultyParam) ?? 'all';
   const sort = sortOptions.find((option) => option === sortParam) ?? 'newest';
+  const cuisine = searchParams.get('cuisine')?.trim() || 'all';
+  const category = searchParams.get('category')?.trim() || 'all';
+  const tag = searchParams.get('tags')?.trim() || 'all';
   const page = getPage(searchParams.get('page'));
 
   const query = new URLSearchParams({ page: String(page), limit: '9', sort });
   if (search) query.set('search', search);
   if (difficulty !== 'all') query.set('difficulty', difficulty);
+  if (cuisine !== 'all') query.set('cuisine', cuisine);
+  if (category !== 'all') query.set('category', category);
+  if (tag !== 'all') query.set('tags', tag);
 
   const { recipes, pagination, isLoading, error, retry } = useRecipes(query.toString());
-  const hasFilters = search.length > 0 || difficulty !== 'all' || sort !== 'newest';
+  const facets = useDiscoveryFacets();
+  const cuisineOptions = includeSelectedFacet(facets.cuisines, cuisine);
+  const categoryOptions = includeSelectedFacet(facets.categories, category);
+  const tagOptions = includeSelectedFacet(facets.tags, tag);
+  const hasFilters =
+    search.length > 0 ||
+    difficulty !== 'all' ||
+    cuisine !== 'all' ||
+    category !== 'all' ||
+    tag !== 'all' ||
+    sort !== 'newest';
 
   function updateFilter(name: string, value: string | null) {
     setSearchParams((current) => {
@@ -78,19 +107,29 @@ export function RecipesPage() {
             Find your next favourite
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-            Search recipes shared by home cooks, then narrow the results by difficulty or cooking
-            time.
+            Search recipes shared by home cooks, explore cuisines and categories, or rank dishes by
+            the community’s ratings.
           </p>
+          <Link className={`${buttonVariants({ variant: 'outline' })} mt-6`} to="/cooks">
+            Discover cooks
+          </Link>
         </div>
       </section>
 
       <section id="recipe-results" className="mx-auto w-full max-w-7xl px-5 py-10 sm:px-8 lg:px-10">
         <div className="rounded-2xl border bg-card p-4 shadow-sm sm:p-5">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
-            <SlidersHorizontal className="size-4 text-primary" />
-            Search and filter
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <SlidersHorizontal className="size-4 text-primary" />
+              Search and filter
+            </div>
+            {hasFilters && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => setSearchParams({})}>
+                Clear filters
+              </Button>
+            )}
           </div>
-          <div className="grid gap-3 lg:grid-cols-[1fr_12rem_12rem_auto]">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[minmax(18rem,1.6fr)_repeat(5,minmax(0,1fr))]">
             <form key={search} className="relative flex gap-2" onSubmit={handleSearch}>
               <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -122,6 +161,72 @@ export function RecipesPage() {
               </SelectContent>
             </Select>
 
+            <Select
+              value={cuisine}
+              onValueChange={(value) => updateFilter('cuisine', value === 'all' ? null : value)}
+            >
+              <SelectTrigger
+                className="h-10 w-full"
+                disabled={facets.isLoading && cuisine === 'all'}
+                aria-label="Filter by cuisine"
+              >
+                <SelectValue placeholder="Cuisine" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All cuisines</SelectItem>
+                {cuisineOptions.map((facet) => (
+                  <SelectItem key={facet.value} value={facet.value}>
+                    {facet.value}
+                    {facet.count > 0 ? ` (${facet.count})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={category}
+              onValueChange={(value) => updateFilter('category', value === 'all' ? null : value)}
+            >
+              <SelectTrigger
+                className="h-10 w-full"
+                disabled={facets.isLoading && category === 'all'}
+                aria-label="Filter by category"
+              >
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All categories</SelectItem>
+                {categoryOptions.map((facet) => (
+                  <SelectItem key={facet.value} value={facet.value}>
+                    {facet.value}
+                    {facet.count > 0 ? ` (${facet.count})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={tag}
+              onValueChange={(value) => updateFilter('tags', value === 'all' ? null : value)}
+            >
+              <SelectTrigger
+                className="h-10 w-full"
+                disabled={facets.isLoading && tag === 'all'}
+                aria-label="Filter by tag"
+              >
+                <SelectValue placeholder="Tag" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All tags</SelectItem>
+                {tagOptions.map((facet) => (
+                  <SelectItem key={facet.value} value={facet.value}>
+                    {facet.value}
+                    {facet.count > 0 ? ` (${facet.count})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Select value={sort} onValueChange={(value) => updateFilter('sort', value)}>
               <SelectTrigger className="h-10 w-full" aria-label="Sort recipes">
                 <SelectValue />
@@ -130,20 +235,19 @@ export function RecipesPage() {
                 <SelectItem value="newest">Newest first</SelectItem>
                 <SelectItem value="oldest">Oldest first</SelectItem>
                 <SelectItem value="quickest">Quickest first</SelectItem>
+                <SelectItem value="top-rated">Top rated</SelectItem>
+                <SelectItem value="popular">Most reviewed</SelectItem>
               </SelectContent>
             </Select>
-
-            {hasFilters && (
-              <Button
-                className="h-10"
-                type="button"
-                variant="ghost"
-                onClick={() => setSearchParams({})}
-              >
-                Clear filters
-              </Button>
-            )}
           </div>
+          {facets.error && (
+            <div className="mt-3 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+              <span>Additional filters could not be loaded.</span>
+              <Button type="button" variant="link" size="xs" onClick={facets.retry}>
+                Try again
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="mt-8 flex items-end justify-between gap-4">

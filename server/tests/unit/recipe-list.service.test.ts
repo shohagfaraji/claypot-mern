@@ -144,6 +144,47 @@ describe('published recipe listing', () => {
     expect(facet.items.slice(0, 2)).toEqual([{ $skip: 6 }, { $limit: 6 }]);
   });
 
+  it.each([
+    [
+      'top-rated',
+      {
+        'reviewSummary.averageRating': -1,
+        'reviewSummary.reviewCount': -1,
+        publishedAt: -1,
+        _id: -1,
+      },
+    ],
+    [
+      'popular',
+      {
+        'reviewSummary.reviewCount': -1,
+        'reviewSummary.averageRating': -1,
+        publishedAt: -1,
+        _id: -1,
+      },
+    ],
+  ] as const)('calculates review summaries before the %s sort', async (sort, expectedSort) => {
+    aggregateRecipesMock.mockResolvedValue([{ items: [], metadata: [] }]);
+
+    await listPublishedRecipes({ ...defaultQuery, sort });
+
+    const pipeline = aggregateRecipesMock.mock.calls[0]?.[0] as Array<Record<string, unknown>>;
+    expect(pipeline[2]).toMatchObject({
+      $lookup: { from: 'reviews', as: 'reviewSummary' },
+    });
+    expect(pipeline[3]).toHaveProperty('$set.reviewSummary');
+    expect(pipeline[4]).toEqual({ $sort: expectedSort });
+
+    const facet = pipeline[5]?.$facet as { items: Array<Record<string, unknown>> };
+    expect(facet.items).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          $lookup: expect.objectContaining({ from: 'reviews' }),
+        }),
+      ]),
+    );
+  });
+
   it('returns empty pagination data when no recipes match', async () => {
     aggregateRecipesMock.mockResolvedValue([]);
 

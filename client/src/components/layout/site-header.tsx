@@ -17,9 +17,9 @@ import { useNotificationContext } from '@/features/notifications/hooks/use-notif
 import { cn } from '@/lib/utils';
 
 const navigation = [
-  { label: 'Discover', href: '/recipes' },
+  { label: 'Recipes', href: '/recipes' },
+  { label: 'Cooks', href: '/cooks' },
   { label: 'How it works', href: '/#how-it-works' },
-  { label: 'Our story', href: '/#our-story' },
 ];
 
 export function SiteHeader() {
