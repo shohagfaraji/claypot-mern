@@ -152,7 +152,7 @@ export const listRecipesQuerySchema = z.strictObject({
   cuisine: optionalFilterSchema('Cuisine'),
   category: optionalFilterSchema('Category'),
   tags: listTagsSchema,
-  sort: z.enum(['newest', 'oldest', 'quickest']).default('newest'),
+  sort: z.enum(['newest', 'oldest', 'quickest', 'top-rated', 'popular']).default('newest'),
 });
 
 export const listOwnRecipesQuerySchema = z.strictObject({
