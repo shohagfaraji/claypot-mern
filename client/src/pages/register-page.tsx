@@ -16,7 +16,7 @@ export function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (status === 'authenticated') {
+  if (status === 'authenticated' && !isSubmitting) {
     return <Navigate to="/" replace />;
   }
 
