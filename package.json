@@ -2,6 +2,7 @@
   "name": "claypot-mern",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "A full-stack recipe-sharing platform built with the MERN stack.",
   "workspaces": [
     "client",
@@ -14,16 +15,24 @@
     "dev:server": "npm run dev --workspace @claypot/server",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "npm run lint --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present && npm run lint:e2e",
+    "lint:e2e": "eslint --config server/eslint.config.js e2e playwright.config.ts",
     "test": "npm run test --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install chromium",
+    "test:e2e:report": "playwright show-report",
+    "typecheck": "npm run typecheck --workspaces --if-present && npm run typecheck:e2e",
+    "typecheck:e2e": "tsc -p e2e/tsconfig.json"
   },
   "engines": {
     "node": ">=22.12.0",
     "npm": ">=9.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/semver": "^7.8.0",
     "concurrently": "^10.0.4",
+    "mongodb-memory-server-core": "^11.2.0",
     "prettier": "3.6.2"
   }
 }
