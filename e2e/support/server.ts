@@ -16,6 +16,7 @@ Object.assign(process.env, {
   ACCESS_TOKEN_SECRET: randomBytes(32).toString('hex'),
   LOG_LEVEL: 'silent',
   TRUST_PROXY_HOPS: '0',
+  API_PROXY_SECRET: '',
   RESEND_API_KEY: 're_local_test_transport',
   EMAIL_FROM: 'Claypot <mail@example.test>',
   RESEND_BASE_URL: `${serverOrigin}/__mail__`,
@@ -69,12 +70,13 @@ async function start() {
   process.env.MONGODB_URI = replicaSet.getUri(databaseName);
   const { createApp } = await import('../../server/src/app.js');
   const { connectToDatabase } = await import('../../server/src/config/database.js');
+  const { prepareDatabase } = await import('../../server/src/config/database-indexes.js');
   const { PasswordResetTokenModel } = await import(
     '../../server/src/models/password-reset-token.model.js'
   );
   const { resetData } = await import('./seed.js');
   await connectToDatabase();
-  await Promise.all(mongoose.modelNames().map((name) => mongoose.model(name).init()));
+  await prepareDatabase();
 
   const app = express();
   app.use('/__test__', express.json());

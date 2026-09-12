@@ -1,6 +1,7 @@
 import type { Server } from 'node:http';
 import { createApp } from './app.js';
 import { connectToDatabase, disconnectFromDatabase } from './config/database.js';
+import { prepareDatabase } from './config/database-indexes.js';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 
@@ -56,6 +57,7 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
 
 async function startServer(): Promise<void> {
   await connectToDatabase();
+  await prepareDatabase();
 
   await new Promise<void>((resolve, reject) => {
     server = app.listen(env.PORT, (error) => {

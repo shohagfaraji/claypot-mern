@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: claypot-api
+    runtime: node
+    plan: free
+    branch: main
+    autoDeployTrigger: 'off'
+    buildCommand: npm ci --include=dev && npm run build --workspace @claypot/server
+    startCommand: npm run start --workspace @claypot/server
+    healthCheckPath: /api/v1/health/ready
+    envVars:
+      - key: NODE_VERSION
+        value: '22'
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_ORIGIN
+        value: https://claypot.netlify.app
+      - key: TRUST_PROXY_HOPS
+        value: '1'
+      - key: MONGODB_URI
+        sync: false
+      - key: ACCESS_TOKEN_SECRET
+        generateValue: true
+      - key: API_PROXY_SECRET
+        generateValue: true
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
