@@ -73,6 +73,39 @@ describe('environment configuration', () => {
     );
   });
 
+  const production = {
+    NODE_ENV: 'production',
+    CLIENT_ORIGIN: 'https://claypot.netlify.app',
+    MONGODB_URI: 'mongodb+srv://db.example.test/claypot-production',
+    ACCESS_TOKEN_SECRET: 'test-production-access-secret-with-32-characters',
+    API_PROXY_SECRET: 'test-production-proxy-secret-with-32-characters',
+  };
+
+  it('accepts production configuration and normalizes the website origin', () => {
+    expect(loadEnv({ ...production, CLIENT_ORIGIN: `${production.CLIENT_ORIGIN}/` })).toMatchObject(
+      production,
+    );
+  });
+
+  it.each([
+    ['CLIENT_ORIGIN', 'http://claypot.netlify.app'],
+    ['CLIENT_ORIGIN', 'https://claypot.netlify.app/recipes'],
+    ['CLIENT_ORIGIN', 'https://user:password@claypot.netlify.app'],
+    ['CLIENT_ORIGIN', 'https://claypot.netlify.app?query=value'],
+    ['CLIENT_ORIGIN', 'https://claypot.netlify.app#fragment'],
+    ['API_PROXY_SECRET', ''],
+    ['API_PROXY_SECRET', 'short'],
+    ['API_PROXY_SECRET', production.ACCESS_TOKEN_SECRET],
+    ['ACCESS_TOKEN_SECRET', 'replace-with-a-unique-secret-at-least-32-characters'],
+    ['MONGODB_URI', 'mongodb://127.0.0.1:27017/claypot'],
+  ])('rejects unsafe production configuration for %s', (key, value) => {
+    expect(() => loadEnv({ ...production, [key]: value })).toThrow(key);
+  });
+
+  it('allows an empty proxy secret during local development', () => {
+    expect(loadEnv({ API_PROXY_SECRET: '' }).API_PROXY_SECRET).toBeUndefined();
+  });
+
   it('requires all Cloudinary credentials when media storage is configured', () => {
     expect(() => loadEnv({ CLOUDINARY_CLOUD_NAME: 'claypot' })).toThrow(
       'Cloudinary cloud name, API key, and API secret must be configured together',

@@ -9,7 +9,28 @@ const envSchema = z
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: z.coerce.number().int().positive().max(65_535).default(5000),
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
-    CLIENT_ORIGIN: z.url().default('http://localhost:5173'),
+    CLIENT_ORIGIN: z
+      .url()
+      .refine(
+        (value) => {
+          if (!URL.canParse(value)) return false;
+          const url = new URL(value);
+          return (
+            ['http:', 'https:'].includes(url.protocol) &&
+            !url.username &&
+            !url.password &&
+            url.pathname === '/' &&
+            !url.search &&
+            !url.hash
+          );
+        },
+        {
+          message:
+            'Must be an HTTP or HTTPS origin without a path, credentials, query, or fragment',
+        },
+      )
+      .transform((value) => new URL(value).origin)
+      .default('http://localhost:5173'),
     LOG_LEVEL: z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
       .default('info'),
@@ -27,6 +48,10 @@ const envSchema = z
       .default(5000),
     MONGODB_MAX_POOL_SIZE: z.coerce.number().int().positive().max(100).default(10),
     ACCESS_TOKEN_SECRET: z.string().min(32).default(developmentAccessTokenSecret),
+    API_PROXY_SECRET: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      z.string().min(32).optional(),
+    ),
     ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().max(60).default(15),
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().max(30).default(7),
     RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().max(1_440).default(15),
@@ -63,12 +88,44 @@ const envSchema = z
   .superRefine((environment, context) => {
     if (
       environment.NODE_ENV === 'production' &&
-      environment.ACCESS_TOKEN_SECRET === developmentAccessTokenSecret
+      (environment.ACCESS_TOKEN_SECRET === developmentAccessTokenSecret ||
+        /^(replace-|your-)/i.test(environment.ACCESS_TOKEN_SECRET))
     ) {
       context.addIssue({
         code: 'custom',
         path: ['ACCESS_TOKEN_SECRET'],
         message: 'A unique access token secret is required in production',
+      });
+    }
+
+    if (environment.NODE_ENV === 'production') {
+      if (!environment.CLIENT_ORIGIN.startsWith('https://')) {
+        context.addIssue({
+          code: 'custom',
+          path: ['CLIENT_ORIGIN'],
+          message: 'An HTTPS website origin is required in production',
+        });
+      }
+      if (environment.MONGODB_URI === 'mongodb://127.0.0.1:27017/claypot') {
+        context.addIssue({
+          code: 'custom',
+          path: ['MONGODB_URI'],
+          message: 'An explicit database connection is required in production',
+        });
+      }
+      if (environment.API_PROXY_SECRET === undefined) {
+        context.addIssue({
+          code: 'custom',
+          path: ['API_PROXY_SECRET'],
+          message: 'A proxy secret is required in production',
+        });
+      }
+    }
+    if (environment.API_PROXY_SECRET === environment.ACCESS_TOKEN_SECRET) {
+      context.addIssue({
+        code: 'custom',
+        path: ['API_PROXY_SECRET'],
+        message: 'Use different secrets for API proxy access and login tokens',
       });
     }
 

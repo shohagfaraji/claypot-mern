@@ -62,7 +62,7 @@ function requireRefreshToken(request: Request): string {
 
 async function startSession(request: Request, response: Response, user: PublicUser) {
   const userAgent = request.get('user-agent');
-  const ipAddress = request.ip;
+  const ipAddress = request.clientIp ?? request.ip;
   const session = await createAuthSession(
     {
       userId: user.id,
@@ -115,7 +115,7 @@ export const refresh: RequestHandler = async (request, response) => {
   const currentRefreshToken = requireRefreshToken(request);
 
   const userAgent = request.get('user-agent');
-  const ipAddress = request.ip;
+  const ipAddress = request.clientIp ?? request.ip;
   const session = await rotateAuthSession(currentRefreshToken, {
     ...(ipAddress === undefined ? {} : { ipAddress }),
     ...(userAgent === undefined ? {} : { userAgent }),
@@ -272,7 +272,7 @@ export const changePassword: RequestHandler = async (request, response) => {
 
   const currentRefreshToken = requireRefreshToken(request);
   const userAgent = request.get('user-agent');
-  const ipAddress = request.ip;
+  const ipAddress = request.clientIp ?? request.ip;
   const session = await changeAccountPassword(
     request.auth.userId,
     currentRefreshToken,

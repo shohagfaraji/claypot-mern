@@ -15,13 +15,16 @@
     "dev:server": "npm run dev --workspace @claypot/server",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "npm run lint --workspaces --if-present && npm run lint:e2e",
+    "lint": "npm run lint --workspaces --if-present && npm run lint:e2e && npm run lint:deployment",
+    "lint:deployment": "eslint --config server/eslint.config.js netlify",
     "lint:e2e": "eslint --config server/eslint.config.js e2e playwright.config.ts",
-    "test": "npm run test --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present && npm run test:deployment",
+    "test:deployment": "vitest run --config netlify/vitest.config.ts",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",
     "test:e2e:report": "playwright show-report",
-    "typecheck": "npm run typecheck --workspaces --if-present && npm run typecheck:e2e",
+    "typecheck": "npm run typecheck --workspaces --if-present && npm run typecheck:e2e && npm run typecheck:deployment",
+    "typecheck:deployment": "tsc -p netlify/tsconfig.json",
     "typecheck:e2e": "tsc -p e2e/tsconfig.json"
   },
   "engines": {
@@ -29,6 +32,7 @@
     "npm": ">=9.0.0"
   },
   "devDependencies": {
+    "@netlify/edge-functions": "^4.0.0",
     "@playwright/test": "^1.63.0",
     "@types/semver": "^7.8.0",
     "concurrently": "^10.0.4",

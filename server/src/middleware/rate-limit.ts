@@ -22,7 +22,7 @@ const rateLimitError = {
 };
 
 function getIpKey(request: Request): string {
-  return `ip:${ipKeyGenerator(request.ip ?? request.socket.remoteAddress ?? '0.0.0.0')}`;
+  return `ip:${ipKeyGenerator(request.clientIp ?? request.ip ?? request.socket.remoteAddress ?? '0.0.0.0')}`;
 }
 
 function getAccountKey(request: Request): string {
