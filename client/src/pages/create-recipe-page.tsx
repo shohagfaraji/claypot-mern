@@ -20,12 +20,14 @@ import { useAuthenticatedRequest } from '@/features/auth/hooks/use-authenticated
 import { ImageUploadField } from '@/features/media/components/image-upload-field';
 import { useManagedImage } from '@/features/media/hooks/use-managed-image';
 import { createRecipe } from '@/features/recipes/api/create-recipe';
+import { RecipePairingPicker } from '@/features/recipes/components/recipe-pairing-picker';
 import { updateRecipe } from '@/features/recipes/api/update-recipe';
 import { useAuthorRecipe } from '@/features/recipes/hooks/use-author-recipe';
 import type {
   AuthorRecipeDetail,
   CreateRecipeInput,
   RecipeDifficulty,
+  RecipePairing,
 } from '@/features/recipes/types';
 import { cn } from '@/lib/utils';
 import { NotFoundPage } from '@/pages/not-found-page';
@@ -54,6 +56,7 @@ interface RecipeFormProps {
 }
 
 function RecipeForm({ recipe }: RecipeFormProps) {
+  const [pairings, setPairings] = useState<RecipePairing[]>(recipe?.pairings ?? []);
   const navigate = useNavigate();
   const request = useAuthenticatedRequest();
   const [ingredients, setIngredients] = useState<IngredientField[]>(() =>
@@ -122,6 +125,7 @@ function RecipeForm({ recipe }: RecipeFormProps) {
 
     try {
       const input: CreateRecipeInput = {
+        pairings,
         title: String(formData.get('title') ?? '').trim(),
         summary: String(formData.get('summary') ?? '').trim(),
         ...(coverImage.image ? { imageUrl: coverImage.image.url } : {}),
@@ -502,6 +506,14 @@ function RecipeForm({ recipe }: RecipeFormProps) {
               </div>
             </CardContent>
           </Card>
+
+          <RecipePairingPicker
+            value={pairings}
+            onChange={setPairings}
+            currentRecipeId={recipe?.id}
+            initialRecipes={recipe?.pairedRecipes ?? []}
+            disabled={isSubmitting}
+          />
 
           <Card className="border-primary/20 bg-secondary/45 shadow-sm">
             <CardContent className="p-6">

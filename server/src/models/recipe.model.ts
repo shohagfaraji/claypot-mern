@@ -2,6 +2,7 @@ import { model, Schema, type Types } from 'mongoose';
 
 export const recipeDifficulties = ['easy', 'medium', 'hard'] as const;
 export const recipeStatuses = ['draft', 'published'] as const;
+export const pairingLabels = ['Side dish', 'Sauce', 'Drink', 'Dessert', 'Related recipe'] as const;
 
 export interface RecipeIngredient {
   name: string;
@@ -14,6 +15,7 @@ export interface RecipeInstruction {
 }
 
 export interface Recipe {
+  pairings: Array<{ recipe: Types.ObjectId; label: (typeof pairingLabels)[number] }>;
   author: Types.ObjectId;
   title: string;
   slug: string;
@@ -73,6 +75,24 @@ const instructionSchema = new Schema<RecipeInstruction>(
 
 const recipeSchema = new Schema<Recipe>(
   {
+    pairings: {
+      type: [
+        new Schema(
+          {
+            recipe: { type: Schema.Types.ObjectId, ref: 'Recipe', required: true },
+            label: { type: String, enum: pairingLabels, required: true },
+          },
+          { _id: false },
+        ),
+      ],
+      default: [],
+      validate: {
+        validator: (items: Array<{ recipe: Types.ObjectId }>) =>
+          items.length <= 6 &&
+          new Set(items.map((item) => String(item.recipe))).size === items.length,
+        message: 'Choose up to six different recipe pairings.',
+      },
+    },
     author: {
       type: Schema.Types.ObjectId,
       ref: 'User',

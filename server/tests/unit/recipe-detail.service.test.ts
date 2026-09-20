@@ -47,7 +47,10 @@ describe('published recipe detail', () => {
 
     aggregateRecipesMock.mockResolvedValue([recipe]);
 
-    await expect(getPublishedRecipeBySlug('spiced-claypot-rice')).resolves.toEqual(recipe);
+    await expect(getPublishedRecipeBySlug('spiced-claypot-rice')).resolves.toEqual({
+      ...recipe,
+      pairedRecipes: [],
+    });
 
     const pipeline = aggregateRecipesMock.mock.calls[0]?.[0] as Array<Record<string, unknown>>;
 

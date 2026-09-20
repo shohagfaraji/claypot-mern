@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { recipeDifficulties, recipeStatuses } from '../models/recipe.model.js';
+import { pairingLabels, recipeDifficulties, recipeStatuses } from '../models/recipe.model.js';
 
 const ingredientInputSchema = z.strictObject({
   name: z
@@ -82,6 +82,23 @@ const listTagsSchema = z
 
 export const createRecipeInputSchema = z
   .strictObject({
+    pairings: z
+      .array(
+        z.strictObject({
+          recipeId: z
+            .string()
+            .trim()
+            .toLowerCase()
+            .regex(/^[a-f0-9]{24}$/, 'Recipe ID is invalid.'),
+          label: z.enum(pairingLabels),
+        }),
+      )
+      .max(6, 'Choose up to six recipe pairings.')
+      .refine(
+        (items) => new Set(items.map((item) => item.recipeId)).size === items.length,
+        'Choose each recipe only once.',
+      )
+      .optional(),
     title: z
       .string()
       .trim()

@@ -26,6 +26,25 @@ const validRecipeInput = {
 };
 
 describe('create recipe input schema', () => {
+  it('validates pairing IDs, labels, uniqueness, and limits', () => {
+    const pairing = { recipeId: '607f1f77bcf86cd799439011', label: 'Side dish' };
+    expect(
+      createRecipeInputSchema.parse({ ...validRecipeInput, pairings: [pairing] }).pairings,
+    ).toEqual([pairing]);
+    for (const pairings of [
+      [pairing, pairing],
+      [{ ...pairing, recipeId: 'invalid' }],
+      [{ ...pairing, label: 'Unknown' }],
+      Array.from({ length: 7 }, (_, index) => ({
+        ...pairing,
+        recipeId: `607f1f77bcf86cd79943901${index}`,
+      })),
+    ]) {
+      expect(createRecipeInputSchema.safeParse({ ...validRecipeInput, pairings }).success).toBe(
+        false,
+      );
+    }
+  });
   it('accepts and normalizes valid recipe input', () => {
     expect(createRecipeInputSchema.parse(validRecipeInput)).toEqual({
       title: 'Spiced Claypot Rice',

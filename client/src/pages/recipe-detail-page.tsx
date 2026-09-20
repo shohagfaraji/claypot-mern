@@ -12,6 +12,7 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 
 import { AppShell } from '@/components/layout/app-shell';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/features/auth/hooks/use-auth';
@@ -308,6 +309,45 @@ export function RecipeDetailPage() {
             </Link>
           </section>
         </div>
+        {!!recipe.pairedRecipes?.length && (
+          <section
+            aria-labelledby="recipe-pairings-heading"
+            className="mx-auto w-full max-w-7xl px-5 pb-12 sm:px-8 lg:px-10"
+          >
+            <h2 id="recipe-pairings-heading" className="font-serif text-3xl font-medium">
+              Serve it with
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Pairings and related recipes selected by {recipe.author.name}.
+            </p>
+            <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {recipe.pairedRecipes.map((pairing) => (
+                <Card key={pairing.id} className="overflow-hidden py-0">
+                  <Link
+                    to={`/recipes/${pairing.slug}`}
+                    className="block h-full rounded-xl focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                  >
+                    {pairing.imageUrl && (
+                      <img
+                        src={pairing.imageUrl}
+                        alt=""
+                        loading="lazy"
+                        className="aspect-[16/9] w-full object-cover"
+                      />
+                    )}
+                    <CardContent className="space-y-3 p-5">
+                      <Badge variant="secondary">{pairing.label}</Badge>
+                      <h3 className="font-serif text-xl font-medium">{pairing.title}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {pairing.category} · {pairing.totalTimeMinutes} min
+                      </p>
+                    </CardContent>
+                  </Link>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
         <RecipeReviews recipeId={recipe.id} authorId={recipe.author.id} />
       </article>
     </AppShell>

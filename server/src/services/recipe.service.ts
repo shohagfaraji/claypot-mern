@@ -17,9 +17,61 @@ import { deleteManagedImageAfterPersistence } from './media.service.js';
 
 const maximumCreateAttempts = 3;
 
-export interface PublicRecipe extends Omit<Recipe, 'author'> {
+export interface PublicRecipe extends Omit<Recipe, 'author' | 'pairings'> {
   id: string;
   author: string;
+  pairings: NonNullable<CreateRecipeInput['pairings']>;
+  pairedRecipes?: PairedRecipe[];
+}
+
+export interface PairedRecipe {
+  id: string;
+  title: string;
+  slug: string;
+  imageUrl: string | null;
+  category: string;
+  totalTimeMinutes: number;
+  label: Recipe['pairings'][number]['label'];
+}
+
+async function validatePairings(pairings: CreateRecipeInput['pairings'], recipeId?: string) {
+  if (!pairings?.length) return;
+  if (pairings.some((item) => item.recipeId === recipeId)) {
+    throw new AppError(400, 'INVALID_RECIPE_PAIRING', 'A recipe cannot be paired with itself.');
+  }
+  const count = await RecipeModel.countDocuments({
+    _id: { $in: pairings.map((item) => new Types.ObjectId(item.recipeId)) },
+    status: 'published',
+  });
+  if (count !== pairings.length) {
+    throw new AppError(
+      400,
+      'INVALID_RECIPE_PAIRING',
+      'Choose published recipes for your pairings. Remove unavailable selections before saving.',
+    );
+  }
+}
+
+async function resolvePairings(pairings: Recipe['pairings'] = []): Promise<PairedRecipe[]> {
+  if (!pairings.length) return [];
+  const recipes = await RecipeModel.aggregate<Omit<PairedRecipe, 'label'>>([
+    { $match: { _id: { $in: pairings.map((item) => item.recipe) }, status: 'published' } },
+    {
+      $project: {
+        _id: 0,
+        id: { $toString: '$_id' },
+        title: 1,
+        slug: 1,
+        imageUrl: 1,
+        category: 1,
+        totalTimeMinutes: { $add: ['$prepTimeMinutes', '$cookTimeMinutes'] },
+      },
+    },
+  ]);
+  return pairings.flatMap((pairing) => {
+    const recipe = recipes.find((item) => item.id === String(pairing.recipe));
+    return recipe ? [{ ...recipe, label: pairing.label }] : [];
+  });
 }
 
 export interface RecipeListItem {
@@ -54,6 +106,7 @@ export interface RecipeDetail
   totalTimeMinutes: number;
   createdAt: Date;
   updatedAt: Date;
+  pairedRecipes: PairedRecipe[];
 }
 
 export interface PaginatedRecipes {
@@ -118,6 +171,10 @@ function toPublicRecipe(recipe: Recipe & { id: string }): PublicRecipe {
   return {
     id: recipe.id,
     author: recipe.author.toString(),
+    pairings: (recipe.pairings ?? []).map((item) => ({
+      recipeId: String(item.recipe),
+      label: item.label,
+    })),
     title: recipe.title,
     slug: recipe.slug,
     summary: recipe.summary,
@@ -145,12 +202,21 @@ export async function createRecipe(
 ): Promise<PublicRecipe> {
   const author = new Types.ObjectId(authorId);
   validateManagedRecipeImage(input.imagePublicId, [authorId]);
+  await validatePairings(input.pairings);
   const slugBase = createSlugBase(input.title);
   let slug = slugBase;
 
   for (let attempt = 1; attempt <= maximumCreateAttempts; attempt += 1) {
     try {
       const recipe = await RecipeModel.create({
+        ...(input.pairings
+          ? {
+              pairings: input.pairings.map((item) => ({
+                recipe: new Types.ObjectId(item.recipeId),
+                label: item.label,
+              })),
+            }
+          : {}),
         author,
         title: input.title,
         slug,
@@ -381,6 +447,7 @@ export async function getPublishedRecipeBySlug(slug: string): Promise<RecipeDeta
         summary: 1,
         imageUrl: 1,
         ingredients: 1,
+        pairings: 1,
         instructions: 1,
         prepTimeMinutes: 1,
         cookTimeMinutes: 1,
@@ -402,13 +469,16 @@ export async function getPublishedRecipeBySlug(slug: string): Promise<RecipeDeta
       },
     },
   ];
-  const [recipe] = await RecipeModel.aggregate<RecipeDetail>(pipeline);
+  const [recipe] = await RecipeModel.aggregate<RecipeDetail & { pairings?: Recipe['pairings'] }>(
+    pipeline,
+  );
 
   if (recipe === undefined) {
     throw new AppError(404, 'RECIPE_NOT_FOUND', 'Recipe was not found.');
   }
 
-  return recipe;
+  const { pairings, ...detail } = recipe;
+  return { ...detail, pairedRecipes: await resolvePairings(pairings) };
 }
 
 export async function publishRecipe(
@@ -471,7 +541,7 @@ export async function getAuthorRecipe(
     throw new AppError(404, 'RECIPE_NOT_FOUND', 'Recipe was not found.');
   }
 
-  return toPublicRecipe(recipe);
+  return { ...toPublicRecipe(recipe), pairedRecipes: await resolvePairings(recipe.pairings) };
 }
 
 export async function updateRecipe(
@@ -486,6 +556,13 @@ export async function updateRecipe(
   }
 
   validateManagedRecipeImage(input.imagePublicId, [recipe.author.toString(), actor.userId]);
+  await validatePairings(input.pairings, recipeId);
+  if (input.pairings !== undefined) {
+    recipe.pairings = input.pairings.map((item) => ({
+      recipe: new Types.ObjectId(item.recipeId),
+      label: item.label,
+    }));
+  }
   const previousImagePublicId = recipe.imagePublicId;
 
   recipe.title = input.title;

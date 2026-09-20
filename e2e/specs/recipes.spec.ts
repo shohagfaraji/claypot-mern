@@ -1,5 +1,5 @@
 import { dishes } from '../support/data.js';
-import { expect, login, loginApi, test } from '../support/fixtures.js';
+import { expect, login, loginApi, selectOption, test } from '../support/fixtures.js';
 import { apiUrl } from '../support/settings.js';
 
 test('a cook can create, edit, publish, unpublish, and delete a recipe', async ({
@@ -23,6 +23,9 @@ test('a cook can create, edit, publish, unpublish, and delete a recipe', async (
   await page.getByLabel('Cuisine', { exact: true }).fill('British');
   await page.getByLabel('Category', { exact: true }).fill('Soup');
   await page.getByLabel('Tags', { exact: true }).fill('carrot, soup');
+  await page.getByLabel('Find a recipe to pair').fill(dishes.rice.title);
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByRole('button', { name: `Add pairing ${dishes.rice.title}`, exact: true }).click();
   await page.getByRole('button', { name: 'Save recipe', exact: true }).click();
   await expect(page).toHaveURL(/\/my-recipes/);
   await expect(page.getByText('Recipe saved as a draft', { exact: true })).toBeVisible();
@@ -31,6 +34,7 @@ test('a cook can create, edit, publish, unpublish, and delete a recipe', async (
     .filter({ has: page.getByRole('heading', { name: 'Roasted Carrot Soup', exact: true }) });
   await card.getByRole('link', { name: 'Edit', exact: true }).click();
   await page.getByLabel('Recipe title').fill('Roasted Carrot and Ginger Soup');
+  await selectOption(page, `Pairing type for ${dishes.rice.title}`, 'Related recipe');
   await page.getByRole('button', { name: 'Save changes', exact: true }).click();
   await expect(page.getByText('Recipe changes saved', { exact: true })).toBeVisible();
   const updated = page.locator('[data-slot="card"]').filter({
@@ -45,6 +49,11 @@ test('a cook can create, edit, publish, unpublish, and delete a recipe', async (
     page.getByRole('heading', { level: 1, name: 'Roasted Carrot and Ginger Soup' }),
   ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Your published recipe' })).toBeVisible();
+  const pairings = page.getByRole('region', { name: 'Serve it with' });
+  await expect(pairings.getByText('Related recipe', { exact: true })).toBeVisible();
+  await expect(pairings.getByRole('link')).toHaveAttribute('href', `/recipes/${dishes.rice.slug}`);
+  await pairings.getByRole('link').click();
+  await expect(page.getByRole('heading', { level: 1, name: dishes.rice.title })).toBeVisible();
   await page.goto('/my-recipes');
   await updated.getByRole('button', { name: 'Unpublish Roasted Carrot and Ginger Soup' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Move to drafts' }).click();

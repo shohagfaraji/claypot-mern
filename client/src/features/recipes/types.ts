@@ -1,4 +1,18 @@
 export type RecipeDifficulty = 'easy' | 'medium' | 'hard';
+export const pairingLabels = ['Side dish', 'Sauce', 'Drink', 'Dessert', 'Related recipe'] as const;
+export interface RecipePairing {
+  recipeId: string;
+  label: (typeof pairingLabels)[number];
+}
+export interface PairedRecipe {
+  id: string;
+  title: string;
+  slug: string;
+  imageUrl: string | null;
+  category: string;
+  totalTimeMinutes: number;
+  label: RecipePairing['label'];
+}
 
 export interface RecipeListItem {
   id: string;
@@ -46,6 +60,7 @@ export interface SavedRecipeListData {
 }
 
 export interface RecipeDetail extends Omit<RecipeListItem, 'averageRating' | 'reviewCount'> {
+  pairedRecipes?: PairedRecipe[];
   ingredients: Array<{
     name: string;
     quantity: string;
@@ -84,6 +99,7 @@ export interface AuthorRecipeListData {
 }
 
 export interface CreateRecipeInput {
+  pairings?: RecipePairing[];
   title: string;
   summary: string;
   imageUrl?: string;
@@ -107,6 +123,7 @@ export interface CreateRecipeInput {
 export interface AuthorRecipeDetail
   extends Omit<CreateRecipeInput, 'imageUrl' | 'imagePublicId' | 'instructions'> {
   id: string;
+  pairedRecipes?: PairedRecipe[];
   author: string;
   slug: string;
   imageUrl: string | null;
