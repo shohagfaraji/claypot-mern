@@ -1,6 +1,28 @@
 import { dishes } from '../support/data.js';
 import { expect, login, test } from '../support/fixtures.js';
 
+test('phone account settings show one section at a time without overflow', async ({ page }) => {
+  await login(page);
+  await page.goto('/account');
+  const navigation = page.getByRole('navigation', { name: 'Account settings', exact: true });
+  await page.getByLabel('Bio', { exact: true }).fill('An unfinished introduction.');
+  for (const [label, heading] of [
+    ['Email', 'Change email address'],
+    ['Password', 'Change password'],
+    ['Sessions', 'Active sessions'],
+    ['Delete account', 'Delete account'],
+  ]) {
+    await navigation.getByRole('link', { name: label!, exact: true }).click();
+    await expect(page.getByRole('heading', { name: heading!, exact: true })).toBeVisible();
+    await expect(page.getByLabel('Bio', { exact: true })).toBeHidden();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+  }
+  await navigation.getByRole('link', { name: 'Profile', exact: true }).click();
+  await expect(page.getByLabel('Bio', { exact: true })).toHaveValue('An unfinished introduction.');
+});
+
 test('phone navigation opens recipes and collections without horizontal overflow', async ({
   page,
 }) => {

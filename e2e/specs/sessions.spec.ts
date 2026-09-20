@@ -5,11 +5,11 @@ test('signing out one device leaves the other sessions active', async ({ page, c
   const phone = await (await createContext({ userAgent: devices['Pixel 7'].userAgent })).newPage();
   const anotherDevice = await (await createContext()).newPage();
   await login(phone);
-  await phone.goto('/account');
+  await phone.goto('/account?section=sessions');
   await login(anotherDevice);
-  await anotherDevice.goto('/account');
+  await anotherDevice.goto('/account?section=sessions');
   await login(page);
-  await page.goto('/account');
+  await page.goto('/account?section=sessions');
 
   const signOutPhone = page.getByRole('button', {
     name: 'Sign out Chrome on Android',
@@ -21,7 +21,7 @@ test('signing out one device leaves the other sessions active', async ({ page, c
   await expect(dialog).toHaveCount(0);
   await expect(signOutPhone).toBeVisible();
   await phone.reload();
-  await expect(phone.getByRole('heading', { level: 1, name: 'Welcome, Robin' })).toBeVisible();
+  await expect(phone.getByRole('heading', { level: 1, name: 'Account settings' })).toBeVisible();
 
   await signOutPhone.click();
   await dialog.getByRole('button', { name: 'Sign out', exact: true }).click();
@@ -31,10 +31,10 @@ test('signing out one device leaves the other sessions active', async ({ page, c
   await expect(phone).toHaveURL(/\/login$/);
   await anotherDevice.reload();
   await expect(
-    anotherDevice.getByRole('heading', { level: 1, name: 'Welcome, Robin' }),
+    anotherDevice.getByRole('heading', { level: 1, name: 'Account settings' }),
   ).toBeVisible();
   await page.reload();
-  await expect(page.getByRole('heading', { level: 1, name: 'Welcome, Robin' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Account settings' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Sign out others', exact: true })).toBeEnabled();
 });
 
@@ -48,10 +48,10 @@ test('signing out all other devices keeps only the current session', async ({
   ];
   for (const otherPage of otherPages) {
     await login(otherPage);
-    await otherPage.goto('/account');
+    await otherPage.goto('/account?section=sessions');
   }
   await login(page);
-  await page.goto('/account');
+  await page.goto('/account?section=sessions');
   await page.getByRole('button', { name: 'Sign out others', exact: true }).click();
   const dialog = page.getByRole('alertdialog');
   await expect(dialog.getByRole('heading')).toHaveText('Sign out all other sessions?');
@@ -63,7 +63,7 @@ test('signing out all other devices keeps only the current session', async ({
     await expect(otherPage).toHaveURL(/\/login$/);
   }
   await page.reload();
-  await expect(page.getByRole('heading', { level: 1, name: 'Welcome, Robin' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Account settings' })).toBeVisible();
   await expect(page.getByText('Current session', { exact: true })).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'Sign out others', exact: true })).toBeDisabled();
 });

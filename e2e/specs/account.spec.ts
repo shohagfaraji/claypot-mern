@@ -1,6 +1,36 @@
 import { members, testPassword } from '../support/data.js';
 import { expect, login, test } from '../support/fixtures.js';
 
+test('settings navigation preserves profile edits and supports direct links and browser history', async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto('/account');
+  const navigation = page.getByRole('navigation', { name: 'Account settings', exact: true });
+  await expect(navigation.getByRole('link', { name: 'Profile', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await expect(page.getByRole('heading', { name: 'Change password', exact: true })).toBeHidden();
+  await expect(page.getByRole('heading', { name: 'Delete account', exact: true })).toBeHidden();
+  await page.getByLabel('Display name').fill('Unsaved display name');
+  await navigation.getByRole('link', { name: 'Email', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Change email address', exact: true }),
+  ).toBeVisible();
+  await page.goBack();
+  await expect(page.getByLabel('Display name')).toHaveValue('Unsaved display name');
+  await navigation.getByRole('link', { name: 'Sessions', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Active sessions', exact: true })).toBeVisible();
+  await page.reload();
+  await expect(navigation.getByRole('link', { name: 'Sessions', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await page.goto('/account?section=unknown');
+  await expect(page.getByLabel('Display name')).toBeVisible();
+});
+
 test('profile changes are saved and shown on the public profile', async ({ page }) => {
   await login(page);
   await page.goto('/account');
@@ -29,7 +59,7 @@ test('changing a password keeps this session and signs out another device', asyn
     await login(otherPage);
     await otherPage.goto('/account');
     await login(page);
-    await page.goto('/account');
+    await page.goto('/account?section=password');
     const form = page
       .locator('form')
       .filter({ has: page.getByLabel('New password', { exact: true }) });
@@ -39,7 +69,7 @@ test('changing a password keeps this session and signs out another device', asyn
     await form.getByRole('button', { name: 'Update password' }).click();
     await expect(page.getByRole('status').filter({ hasText: /password/i })).toBeVisible();
     await page.reload();
-    await expect(page.getByRole('heading', { level: 1, name: 'Welcome, Robin' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Account settings' })).toBeVisible();
     await otherPage.reload();
     await expect(otherPage).toHaveURL(/\/login$/);
   } finally {
@@ -52,7 +82,7 @@ test('an email change waits for confirmation and preserves the current session',
   data,
 }) => {
   await login(page);
-  await page.goto('/account');
+  await page.goto('/account?section=email');
   const form = page.locator('form').filter({ has: page.getByLabel('New email address') });
   await form.getByLabel('New email address').fill('robin.new@example.test');
   await form.getByLabel('Current password', { exact: true }).fill(testPassword);
@@ -62,7 +92,7 @@ test('an email change waits for confirmation and preserves the current session',
   await page.goto(link);
   await expect(page.getByRole('heading', { name: 'Email address updated' })).toBeVisible();
   await page.getByRole('link', { name: 'Open account', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Welcome, Robin' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Account settings' })).toBeVisible();
   await expect(page.getByText('robin.new@example.test', { exact: true }).first()).toBeVisible();
   await expect
     .poll(async () =>
@@ -75,7 +105,7 @@ test('an email change waits for confirmation and preserves the current session',
 
 test('deleting an account requires confirmation and removes access', async ({ page }) => {
   await login(page);
-  await page.goto('/account');
+  await page.goto('/account?section=delete');
   await page.getByRole('button', { name: 'Delete account', exact: true }).click();
   const dialog = page.getByRole('alertdialog');
   await expect(dialog.getByRole('button', { name: 'Delete permanently' })).toBeDisabled();
