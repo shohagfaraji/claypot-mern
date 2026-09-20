@@ -70,7 +70,7 @@ export function AccountDeletion() {
 
   return (
     <>
-      <section className="mx-auto w-full max-w-7xl px-5 pb-12 sm:px-8 lg:px-10">
+      <section aria-label="Delete account">
         <Card className="border-destructive/35 bg-destructive/3 shadow-sm">
           <CardContent className="p-6 sm:p-8">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">

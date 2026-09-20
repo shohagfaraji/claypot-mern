@@ -162,9 +162,9 @@ export function AccountEmailChange() {
 
   return (
     <>
-      <section className="mx-auto w-full max-w-7xl px-5 pb-10 sm:px-8 lg:px-10">
+      <section aria-label="Change email address">
         <Card className="border-border/70 shadow-sm">
-          <CardContent className="grid gap-8 p-6 sm:p-8 lg:grid-cols-[0.72fr_1fr] lg:gap-12">
+          <CardContent className="space-y-8 p-6 sm:p-8">
             <div>
               <div className="grid size-11 place-items-center rounded-xl bg-secondary text-primary">
                 <MailCheck className="size-5" />

@@ -2,6 +2,17 @@ import { ImagePlus, LoaderCircle, Trash2, Upload } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 
 import { Button, buttonVariants } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { useAuthenticatedRequest } from '@/features/auth/hooks/use-authenticated-request';
 import { uploadImage } from '@/features/media/api/upload-image';
 import type { ImagePurpose, ManagedImage } from '@/features/media/types';
@@ -51,6 +62,7 @@ export function ImageUploadField({
   const [progress, setProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isConfirmingRemoval, setIsConfirmingRemoval] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -176,19 +188,42 @@ export function ImageUploadField({
           {value || previewUrl ? 'Replace image' : 'Choose image'}
         </label>
         {value && (
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={disabled || isUploading}
-            onClick={() => {
-              clearPreview();
-              setError(null);
-              onChange(null);
-            }}
-          >
-            <Trash2 />
-            Remove
-          </Button>
+          <AlertDialog open={isConfirmingRemoval} onOpenChange={setIsConfirmingRemoval}>
+            <AlertDialogTrigger
+              render={<Button type="button" variant="ghost" disabled={disabled || isUploading} />}
+            >
+              <Trash2 />
+              Remove
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Remove {purpose === 'avatar' ? 'profile image' : 'recipe image'}?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will remove the selected image from this form. Save your changes to update{' '}
+                  {purpose === 'avatar' ? 'your profile' : 'the recipe'}.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Keep image</AlertDialogCancel>
+                <AlertDialogAction
+                  type="button"
+                  variant="destructive"
+                  disabled={disabled || isUploading}
+                  onClick={() => {
+                    if (disabled || isUploading) return;
+                    setIsConfirmingRemoval(false);
+                    clearPreview();
+                    setError(null);
+                    onChange(null);
+                  }}
+                >
+                  Remove image
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
       </div>
 

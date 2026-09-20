@@ -1,21 +1,22 @@
 import {
-  CalendarDays,
   CheckCircle2,
   Image as ImageIcon,
   LoaderCircle,
   LogOut,
-  Mail,
+  KeyRound,
+  Monitor,
+  UserRound,
+  Trash2,
   MailCheck,
   RefreshCw,
   Save,
-  ShieldCheck,
 } from 'lucide-react';
 import { useState, type SubmitEvent } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { AppShell } from '@/components/layout/app-shell';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,12 +30,15 @@ import { useAuthenticatedRequest } from '@/features/auth/hooks/use-authenticated
 import { ImageUploadField } from '@/features/media/components/image-upload-field';
 import { useManagedImage } from '@/features/media/hooks/use-managed-image';
 import { getInitials } from '@/lib/get-initials';
+import { cn } from '@/lib/utils';
 
-const dateFormatter = new Intl.DateTimeFormat('en', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-});
+const settingsSections = [
+  { id: 'profile', label: 'Profile', icon: UserRound },
+  { id: 'email', label: 'Email', icon: MailCheck },
+  { id: 'password', label: 'Password', icon: KeyRound },
+  { id: 'sessions', label: 'Sessions', icon: Monitor },
+  { id: 'delete', label: 'Delete account', icon: Trash2 },
+] as const;
 
 interface AccountLocationState {
   registrationCompleted?: boolean;
@@ -46,12 +50,17 @@ export function AccountPage() {
   const request = useAuthenticatedRequest();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const section =
+    settingsSections.find((item) => item.id === searchParams.get('section'))?.id ?? 'profile';
   const registrationState = location.state as AccountLocationState | null;
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSaved, setProfileSaved] = useState(false);
+  const [profileName, setProfileName] = useState(user?.name ?? '');
+  const [profileBio, setProfileBio] = useState(user?.bio ?? '');
   const avatar = useManagedImage(
     user?.avatarUrl ? { url: user.avatarUrl, publicId: user.avatarPublicId } : null,
     'avatar',
@@ -113,6 +122,8 @@ export function AccountPage() {
           : null,
       );
       updateSessionUser(updatedUser);
+      setProfileName(updatedUser.name);
+      setProfileBio(updatedUser.bio ?? '');
       setProfileSaved(true);
       setIsSavingProfile(false);
     } catch (updateProfileError) {
@@ -154,254 +165,253 @@ export function AccountPage() {
 
   return (
     <AppShell>
-      <section className="border-b bg-card/45">
-        <div className="mx-auto w-full max-w-7xl px-5 py-12 sm:px-8 sm:py-16 lg:px-10">
-          <p className="text-xs font-bold tracking-[0.14em] text-primary uppercase">Your account</p>
-          <h1 className="mt-3 font-serif text-5xl font-medium tracking-[-0.045em] sm:text-6xl">
-            Welcome, {user.name.split(' ')[0]}
+      <header className="border-b bg-card/45">
+        <div className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8 lg:px-10">
+          <h1 className="font-serif text-4xl font-medium tracking-tight sm:text-5xl">
+            Account settings
           </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-            Review the profile connected to your Claypot session and manage your sign-in.
+          <p className="mt-3 text-muted-foreground">
+            Manage your public profile, sign-in details, and devices.
           </p>
         </div>
-      </section>
-
-      <section className="mx-auto grid w-full max-w-7xl gap-6 px-5 py-10 sm:px-8 lg:grid-cols-[1fr_0.72fr] lg:px-10">
-        <Card className="border-border/70 shadow-sm">
-          <CardContent className="p-6 sm:p-8">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-              <div className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-2xl bg-secondary text-xl font-bold text-primary">
+      </header>
+      <div className="mx-auto grid w-full max-w-6xl gap-8 px-5 py-8 sm:px-8 lg:grid-cols-[14rem_minmax(0,1fr)] lg:px-10">
+        <aside className="min-w-0">
+          <div className="lg:sticky lg:top-24">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary font-semibold text-primary">
                 {user.avatarUrl ? (
-                  <img className="size-full object-cover" src={user.avatarUrl} alt={user.name} />
+                  <img src={user.avatarUrl} alt="" className="size-full object-cover" />
                 ) : (
                   getInitials(user.name)
                 )}
               </div>
               <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="font-serif text-3xl font-medium tracking-[-0.03em]">
-                    {user.name}
-                  </h2>
-                  <Badge variant="secondary" className="capitalize">
-                    {user.role}
-                  </Badge>
-                </div>
-                <p className="mt-1 text-muted-foreground">@{user.username}</p>
+                <p className="truncate font-semibold">{user.name}</p>
+                <p className="truncate text-xs text-muted-foreground">@{user.username}</p>
+                <Link
+                  to={`/cooks/${user.username}`}
+                  className="text-sm text-primary underline-offset-4 hover:underline"
+                >
+                  View public profile
+                </Link>
               </div>
             </div>
-
-            <dl className="mt-8 grid gap-px overflow-hidden rounded-2xl border bg-border sm:grid-cols-2">
-              <div className="bg-background p-5">
-                <dt className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <Mail className="size-4 text-primary" />
-                  Email address
-                </dt>
-                <dd className="mt-2 break-all font-semibold">{user.email}</dd>
-              </div>
-              <div className="bg-background p-5">
-                <dt className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <CalendarDays className="size-4 text-primary" />
-                  Claypot member since
-                </dt>
-                <dd className="mt-2 font-semibold">
-                  {dateFormatter.format(new Date(user.createdAt))}
-                </dd>
-              </div>
-              <div className="bg-background p-5 sm:col-span-2">
-                <dt className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <CheckCircle2 className="size-4 text-primary" />
-                  Email status
-                </dt>
-                <dd className="mt-2 font-semibold">
-                  {user.isEmailVerified ? 'Verified' : 'Verification pending'}
-                </dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
-
-        <div className="grid content-start gap-6">
-          <Card className="border-border/70 shadow-sm">
-            <CardContent className="p-6 sm:p-8">
-              <div className="grid size-11 place-items-center rounded-xl bg-secondary text-primary">
-                <MailCheck className="size-5" />
-              </div>
-              <h2 className="mt-5 font-serif text-2xl font-medium">Email verification</h2>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                {user.isEmailVerified
-                  ? 'Your email address has been confirmed.'
-                  : `We will send a private verification link to ${user.email}.`}
-              </p>
-
-              {verificationNotice && (
-                <div
-                  className="mt-5 flex gap-2 rounded-xl border border-primary/20 bg-secondary/55 px-4 py-3 text-sm"
-                  role="status"
-                >
-                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
-                  <span>{verificationNotice}</span>
-                </div>
-              )}
-
-              {verificationError && (
-                <div
-                  className="mt-5 rounded-xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-sm text-destructive"
-                  role="alert"
-                >
-                  {verificationError}
-                </div>
-              )}
-
-              {!user.isEmailVerified && (
-                <Button
-                  className="mt-6 w-full"
-                  variant="outline"
-                  disabled={isSendingVerification}
-                  onClick={() => void handleVerificationRequest()}
-                >
-                  {isSendingVerification ? (
-                    <LoaderCircle className="animate-spin" />
-                  ) : (
-                    <RefreshCw />
+            <nav
+              aria-label="Account settings"
+              className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1"
+            >
+              {settingsSections.map(({ id, label, icon: Icon }) => (
+                <Link
+                  key={id}
+                  to={id === 'profile' ? '/account' : `/account?section=${id}`}
+                  state={location.state}
+                  aria-current={section === id ? 'page' : undefined}
+                  className={cn(
+                    buttonVariants({ variant: section === id ? 'secondary' : 'ghost' }),
+                    'h-11 justify-start whitespace-normal',
+                    id === 'delete' && 'text-destructive',
                   )}
-                  {isSendingVerification ? 'Sending link…' : 'Send verification email'}
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/70 shadow-sm">
-            <CardContent className="p-6 sm:p-8">
-              <div className="grid size-11 place-items-center rounded-xl bg-secondary text-primary">
-                <ShieldCheck className="size-5" />
-              </div>
-              <h2 className="mt-5 font-serif text-2xl font-medium">Session security</h2>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Signing out revokes this session and removes its secure refresh cookie.
-              </p>
-
-              {error && (
-                <div
-                  className="mt-5 rounded-xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-sm text-destructive"
-                  role="alert"
                 >
-                  {error}
-                </div>
-              )}
-
-              <Button
-                className="mt-6 w-full"
-                variant="outline"
-                disabled={isSigningOut}
-                onClick={handleSignOut}
-              >
+                  <Icon aria-hidden="true" />
+                  {label}
+                </Link>
+              ))}
+            </nav>
+            <div className="mt-5 border-t pt-4">
+              <Button variant="ghost" disabled={isSigningOut} onClick={handleSignOut}>
                 {isSigningOut ? <LoaderCircle className="animate-spin" /> : <LogOut />}
                 {isSigningOut ? 'Signing out…' : 'Sign out'}
               </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      <AccountSecurity />
-
-      <AccountEmailChange />
-
-      <section className="mx-auto w-full max-w-7xl px-5 pb-12 sm:px-8 lg:px-10">
-        <Card className="border-border/70 shadow-sm">
-          <CardContent className="p-6 sm:p-8">
-            <div className="grid gap-8 lg:grid-cols-[0.55fr_1fr] lg:gap-12">
-              <div>
-                <div className="grid size-11 place-items-center rounded-xl bg-secondary text-primary">
-                  <ImageIcon className="size-5" />
-                </div>
-                <h2 className="mt-5 font-serif text-3xl font-medium tracking-[-0.03em]">
-                  Edit your profile
-                </h2>
-                <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
-                  Keep your display name and introduction current. These details will represent you
-                  wherever your recipes appear.
+              {error && (
+                <p role="alert" className="mt-2 text-sm text-destructive">
+                  {error}
                 </p>
-              </div>
+              )}
+            </div>
+          </div>
+        </aside>
+        <div className="min-w-0">
+          <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border bg-card px-4 py-3 text-sm">
+            <span className="min-w-0 break-all">{user.email}</span>
+            <Badge variant="secondary">
+              {user.isEmailVerified ? 'Verified' : 'Verification pending'}
+            </Badge>
+            {!user.isEmailVerified && section !== 'email' && (
+              <Link
+                to="/account?section=email"
+                className="font-medium text-primary underline underline-offset-4"
+              >
+                Verify email
+              </Link>
+            )}
+          </div>
+          <div hidden={section !== 'profile'}>
+            <section aria-label="Profile settings">
+              <Card className="border-border/70 shadow-sm">
+                <CardContent className="p-6 sm:p-8">
+                  <div className="space-y-6">
+                    <div>
+                      <div className="grid size-11 place-items-center rounded-xl bg-secondary text-primary">
+                        <ImageIcon className="size-5" />
+                      </div>
+                      <h2 className="mt-5 font-serif text-3xl font-medium tracking-[-0.03em]">
+                        Edit your profile
+                      </h2>
+                      <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
+                        Keep your display name and introduction current. These details will
+                        represent you wherever your recipes appear.
+                      </p>
+                    </div>
 
-              <form className="space-y-5" onSubmit={handleProfileSubmit}>
-                <div className="space-y-2">
-                  <Label htmlFor="profile-name">Display name</Label>
-                  <Input
-                    id="profile-name"
-                    className="h-11"
-                    name="name"
-                    type="text"
-                    autoComplete="name"
-                    defaultValue={user.name}
-                    minLength={2}
-                    maxLength={80}
-                    required
-                    disabled={isSavingProfile}
-                  />
-                </div>
+                    <form
+                      className="space-y-5"
+                      onSubmit={handleProfileSubmit}
+                      onChange={() => setProfileSaved(false)}
+                    >
+                      <div className="space-y-2">
+                        <Label htmlFor="profile-name">Display name</Label>
+                        <Input
+                          id="profile-name"
+                          className="h-11"
+                          name="name"
+                          type="text"
+                          autoComplete="name"
+                          value={profileName}
+                          onChange={(event) => setProfileName(event.target.value)}
+                          minLength={2}
+                          maxLength={80}
+                          required
+                          disabled={isSavingProfile}
+                        />
+                      </div>
 
-                <div className="max-w-72">
-                  <ImageUploadField
-                    label="Profile avatar"
-                    description="Upload a square AVIF, JPEG, PNG, or WebP image up to 8 MB."
-                    purpose="avatar"
-                    value={avatar.image}
-                    aspect="square"
-                    disabled={isSavingProfile}
-                    onChange={avatar.setImage}
-                    onUploadingChange={setIsAvatarUploading}
-                  />
-                </div>
+                      <div className="max-w-72">
+                        <ImageUploadField
+                          label="Profile avatar"
+                          description="Upload a square AVIF, JPEG, PNG, or WebP image up to 8 MB."
+                          purpose="avatar"
+                          value={avatar.image}
+                          aspect="square"
+                          disabled={isSavingProfile}
+                          onChange={(image) => {
+                            avatar.setImage(image);
+                            setProfileSaved(false);
+                          }}
+                          onUploadingChange={setIsAvatarUploading}
+                        />
+                      </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="profile-bio">Bio</Label>
-                  <Textarea
-                    id="profile-bio"
-                    className="min-h-28 resize-y"
-                    name="bio"
-                    defaultValue={user.bio ?? ''}
-                    maxLength={300}
-                    placeholder="Tell other cooks a little about yourself."
-                    disabled={isSavingProfile}
-                  />
-                  <p className="text-xs text-muted-foreground">Up to 300 characters.</p>
-                </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="profile-bio">Bio</Label>
+                        <Textarea
+                          id="profile-bio"
+                          className="min-h-28 resize-y"
+                          name="bio"
+                          value={profileBio}
+                          onChange={(event) => setProfileBio(event.target.value)}
+                          maxLength={300}
+                          placeholder="Tell other cooks a little about yourself."
+                          disabled={isSavingProfile}
+                        />
+                        <p className="text-xs text-muted-foreground">Up to 300 characters.</p>
+                      </div>
 
-                {profileError && (
-                  <div
-                    className="rounded-xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-sm text-destructive"
-                    role="alert"
-                  >
-                    {profileError}
+                      {profileError && (
+                        <div
+                          className="rounded-xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-sm text-destructive"
+                          role="alert"
+                        >
+                          {profileError}
+                        </div>
+                      )}
+
+                      {profileSaved && (
+                        <div
+                          className="flex items-center gap-2 rounded-xl border border-primary/20 bg-secondary/55 px-4 py-3 text-sm font-medium"
+                          role="status"
+                        >
+                          <CheckCircle2 className="size-4 text-primary" />
+                          Your profile has been updated.
+                        </div>
+                      )}
+
+                      <Button type="submit" disabled={isSavingProfile || isAvatarUploading}>
+                        {isSavingProfile ? <LoaderCircle className="animate-spin" /> : <Save />}
+                        {isSavingProfile
+                          ? 'Saving profile…'
+                          : isAvatarUploading
+                            ? 'Uploading avatar…'
+                            : 'Save profile'}
+                      </Button>
+                    </form>
                   </div>
-                )}
+                </CardContent>
+              </Card>
+            </section>
+          </div>
+          <div
+            hidden={section !== 'email'}
+            className={section === 'email' ? 'space-y-6' : undefined}
+          >
+            <Card className="border-border/70 shadow-sm">
+              <CardContent className="p-6 sm:p-8">
+                <div className="grid size-11 place-items-center rounded-xl bg-secondary text-primary">
+                  <MailCheck className="size-5" />
+                </div>
+                <h2 className="mt-5 font-serif text-2xl font-medium">Email verification</h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {user.isEmailVerified
+                    ? 'Your email address has been confirmed.'
+                    : `We will send a private verification link to ${user.email}.`}
+                </p>
 
-                {profileSaved && (
+                {verificationNotice && (
                   <div
-                    className="flex items-center gap-2 rounded-xl border border-primary/20 bg-secondary/55 px-4 py-3 text-sm font-medium"
+                    className="mt-5 flex gap-2 rounded-xl border border-primary/20 bg-secondary/55 px-4 py-3 text-sm"
                     role="status"
                   >
-                    <CheckCircle2 className="size-4 text-primary" />
-                    Your profile has been updated.
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
+                    <span>{verificationNotice}</span>
                   </div>
                 )}
 
-                <Button type="submit" disabled={isSavingProfile || isAvatarUploading}>
-                  {isSavingProfile ? <LoaderCircle className="animate-spin" /> : <Save />}
-                  {isSavingProfile
-                    ? 'Saving profile…'
-                    : isAvatarUploading
-                      ? 'Uploading avatar…'
-                      : 'Save profile'}
-                </Button>
-              </form>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
+                {verificationError && (
+                  <div
+                    className="mt-5 rounded-xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-sm text-destructive"
+                    role="alert"
+                  >
+                    {verificationError}
+                  </div>
+                )}
 
-      <AccountDeletion />
+                {!user.isEmailVerified && (
+                  <Button
+                    className="mt-6 w-full"
+                    variant="outline"
+                    disabled={isSendingVerification}
+                    onClick={() => void handleVerificationRequest()}
+                  >
+                    {isSendingVerification ? (
+                      <LoaderCircle className="animate-spin" />
+                    ) : (
+                      <RefreshCw />
+                    )}
+                    {isSendingVerification ? 'Sending link…' : 'Send verification email'}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+            <AccountEmailChange />
+          </div>
+          <div hidden={section !== 'password' && section !== 'sessions'}>
+            <AccountSecurity section={section === 'sessions' ? 'sessions' : 'password'} />
+          </div>
+          <div hidden={section !== 'delete'}>
+            <AccountDeletion />
+          </div>
+        </div>
+      </div>
     </AppShell>
   );
 }
