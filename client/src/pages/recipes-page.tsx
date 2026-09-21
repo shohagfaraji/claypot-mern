@@ -1,5 +1,5 @@
 import { Search, SlidersHorizontal } from 'lucide-react';
-import type { SubmitEvent } from 'react';
+import { useEffect, useState, type SubmitEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { AppShell } from '@/components/layout/app-shell';
@@ -39,6 +39,38 @@ function includeSelectedFacet(options: DiscoveryFacet[], selected: string) {
 export function RecipesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get('search')?.trim() ?? '';
+  const [draft, setDraft] = useState<{ source: string; text: string; pending: string | null }>({
+    source: search,
+    text: search,
+    pending: null,
+  });
+  const [isComposing, setIsComposing] = useState(false);
+  if (draft.source !== search) {
+    setDraft({
+      source: search,
+      text: draft.pending === search ? draft.text : search,
+      pending: null,
+    });
+  }
+  const searchText = draft.text;
+
+  useEffect(() => {
+    if (isComposing || searchText.trim() === search) return;
+    const timer = window.setTimeout(() => {
+      setDraft((current) => ({ ...current, pending: searchText.trim() }));
+      setSearchParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          if (searchText.trim()) next.set('search', searchText.trim());
+          else next.delete('search');
+          next.delete('page');
+          return next;
+        },
+        { replace: true },
+      );
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [searchText, search, isComposing, setSearchParams]);
   const difficultyParam = searchParams.get('difficulty');
   const sortParam = searchParams.get('sort');
   const difficulty = difficulties.find((option) => option === difficultyParam) ?? 'all';
@@ -61,6 +93,7 @@ export function RecipesPage() {
   const categoryOptions = includeSelectedFacet(facets.categories, category);
   const tagOptions = includeSelectedFacet(facets.tags, tag);
   const hasFilters =
+    searchText.length > 0 ||
     search.length > 0 ||
     difficulty !== 'all' ||
     cuisine !== 'all' ||
@@ -69,9 +102,14 @@ export function RecipesPage() {
     sort !== 'newest';
 
   function updateFilter(name: string, value: string | null) {
+    setDraft((current) => ({
+      ...current,
+      pending: name === 'search' ? (value ?? '') : searchText.trim(),
+    }));
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
-
+      if (searchText.trim()) next.set('search', searchText.trim());
+      else next.delete('search');
       if (value) next.set(name, value);
       else next.delete(name);
       next.delete('page');
@@ -82,6 +120,7 @@ export function RecipesPage() {
 
   function handleSearch(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isComposing) return;
     const formData = new FormData(event.currentTarget);
     const value = String(formData.get('search') ?? '').trim();
     updateFilter('search', value || null);
@@ -124,19 +163,33 @@ export function RecipesPage() {
               Search and filter
             </div>
             {hasFilters && (
-              <Button type="button" variant="ghost" size="sm" onClick={() => setSearchParams({})}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setDraft({ source: search, text: '', pending: '' });
+                  setSearchParams({});
+                }}
+              >
                 Clear filters
               </Button>
             )}
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[minmax(18rem,1.6fr)_repeat(5,minmax(0,1fr))]">
-            <form key={search} className="relative flex gap-2" onSubmit={handleSearch}>
+            <form className="relative flex gap-2" onSubmit={handleSearch}>
               <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 className="h-10 pl-9"
                 type="search"
                 name="search"
-                defaultValue={search}
+                value={searchText}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setDraft((current) => ({ ...current, text: value }));
+                }}
+                onCompositionStart={() => setIsComposing(true)}
+                onCompositionEnd={() => setIsComposing(false)}
                 maxLength={100}
                 placeholder="Search recipes"
                 aria-label="Search recipes"
@@ -151,7 +204,11 @@ export function RecipesPage() {
               onValueChange={(value) => updateFilter('difficulty', value === 'all' ? null : value)}
             >
               <SelectTrigger className="h-10 w-full" aria-label="Filter by difficulty">
-                <SelectValue />
+                <SelectValue>
+                  {difficulty === 'all'
+                    ? 'All difficulties'
+                    : difficulty[0]!.toUpperCase() + difficulty.slice(1)}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All difficulties</SelectItem>
@@ -170,7 +227,7 @@ export function RecipesPage() {
                 disabled={facets.isLoading && cuisine === 'all'}
                 aria-label="Filter by cuisine"
               >
-                <SelectValue placeholder="Cuisine" />
+                <SelectValue>{cuisine === 'all' ? 'All cuisines' : cuisine}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All cuisines</SelectItem>
@@ -192,7 +249,7 @@ export function RecipesPage() {
                 disabled={facets.isLoading && category === 'all'}
                 aria-label="Filter by category"
               >
-                <SelectValue placeholder="Category" />
+                <SelectValue>{category === 'all' ? 'All categories' : category}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All categories</SelectItem>
@@ -214,7 +271,7 @@ export function RecipesPage() {
                 disabled={facets.isLoading && tag === 'all'}
                 aria-label="Filter by tag"
               >
-                <SelectValue placeholder="Tag" />
+                <SelectValue>{tag === 'all' ? 'All tags' : tag}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All tags</SelectItem>
@@ -229,7 +286,17 @@ export function RecipesPage() {
 
             <Select value={sort} onValueChange={(value) => updateFilter('sort', value)}>
               <SelectTrigger className="h-10 w-full" aria-label="Sort recipes">
-                <SelectValue />
+                <SelectValue>
+                  {
+                    {
+                      newest: 'Newest first',
+                      oldest: 'Oldest first',
+                      quickest: 'Quickest first',
+                      'top-rated': 'Top rated',
+                      popular: 'Most reviewed',
+                    }[sort]
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="newest">Newest first</SelectItem>
@@ -252,7 +319,12 @@ export function RecipesPage() {
 
         <div className="mt-8 flex items-end justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold">
+            <p
+              className="text-sm font-semibold"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
               {isLoading
                 ? 'Finding recipes…'
                 : `${pagination.total} ${pagination.total === 1 ? 'recipe' : 'recipes'} found`}

@@ -98,9 +98,42 @@ function RecipeForm({ recipe }: RecipeFormProps) {
     );
   }
 
+  function appendIngredientIfComplete() {
+    setIngredients((current) => {
+      const last = current.at(-1);
+      return current.length < 50 && last?.name.trim() && last.quantity.trim()
+        ? [...current, createIngredient()]
+        : current;
+    });
+  }
+
+  function appendInstructionIfComplete() {
+    setInstructions((current) =>
+      current.length < 50 && (current.at(-1)?.description.trim().length ?? 0) >= 3
+        ? [...current, createInstruction()]
+        : current,
+    );
+  }
+
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
+    const filledIngredients = ingredients.filter(
+      (item) => item.name.trim() || item.quantity.trim(),
+    );
+    const filledInstructions = instructions.filter((item) => item.description.trim());
+    if (!filledIngredients.length || !filledInstructions.length) {
+      setError('Add at least one ingredient and one instruction.');
+      return;
+    }
+    if (filledIngredients.some((item) => !item.name.trim() || !item.quantity.trim())) {
+      setError('Enter both a name and quantity for each ingredient.');
+      return;
+    }
+    if (filledInstructions.some((item) => item.description.trim().length < 3)) {
+      setError('Each instruction must contain at least 3 characters.');
+      return;
+    }
     const tags = [
       ...new Set(
         String(formData.get('tags') ?? '')
@@ -130,11 +163,11 @@ function RecipeForm({ recipe }: RecipeFormProps) {
         summary: String(formData.get('summary') ?? '').trim(),
         ...(coverImage.image ? { imageUrl: coverImage.image.url } : {}),
         ...(coverImage.image?.publicId ? { imagePublicId: coverImage.image.publicId } : {}),
-        ingredients: ingredients.map(({ name, quantity }) => ({
+        ingredients: filledIngredients.map(({ name, quantity }) => ({
           name: name.trim(),
           quantity: quantity.trim(),
         })),
-        instructions: instructions.map(({ description }) => ({
+        instructions: filledInstructions.map(({ description }) => ({
           description: description.trim(),
         })),
         prepTimeMinutes: Number(formData.get('prepTimeMinutes')),
@@ -254,18 +287,10 @@ function RecipeForm({ recipe }: RecipeFormProps) {
                     Ingredients
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    List each ingredient with its quantity.
+                    List each ingredient with its quantity. A new row appears after you finish a
+                    row. Empty rows are not saved.
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={ingredients.length >= 50 || isSubmitting}
-                  onClick={() => setIngredients((current) => [...current, createIngredient()])}
-                >
-                  <Plus />
-                  Add
-                </Button>
               </div>
 
               <div className="mt-6 space-y-4">
@@ -284,7 +309,8 @@ function RecipeForm({ recipe }: RecipeFormProps) {
                         minLength={1}
                         maxLength={100}
                         placeholder="Basmati rice"
-                        required
+                        required={Boolean(ingredient.name.trim() || ingredient.quantity.trim())}
+                        onBlur={appendIngredientIfComplete}
                         disabled={isSubmitting}
                         onChange={(event) =>
                           updateIngredient(ingredient.id, 'name', event.target.value)
@@ -299,7 +325,8 @@ function RecipeForm({ recipe }: RecipeFormProps) {
                         minLength={1}
                         maxLength={50}
                         placeholder="2 cups"
-                        required
+                        required={Boolean(ingredient.name.trim() || ingredient.quantity.trim())}
+                        onBlur={appendIngredientIfComplete}
                         disabled={isSubmitting}
                         onChange={(event) =>
                           updateIngredient(ingredient.id, 'quantity', event.target.value)
@@ -323,6 +350,27 @@ function RecipeForm({ recipe }: RecipeFormProps) {
                   </div>
                 ))}
               </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-4"
+                disabled={
+                  ingredients.length >= 50 ||
+                  isSubmitting ||
+                  (!ingredients.at(-1)?.name.trim() && !ingredients.at(-1)?.quantity.trim())
+                }
+                onClick={() =>
+                  setIngredients((current) =>
+                    current.length >= 50 ||
+                    (!current.at(-1)?.name.trim() && !current.at(-1)?.quantity.trim())
+                      ? current
+                      : [...current, createIngredient()],
+                  )
+                }
+              >
+                <Plus />
+                Add ingredient
+              </Button>
             </CardContent>
           </Card>
 
@@ -332,18 +380,10 @@ function RecipeForm({ recipe }: RecipeFormProps) {
                 <div>
                   <h2 className="font-serif text-3xl font-medium tracking-[-0.03em]">Method</h2>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Break the cooking process into clear steps.
+                    Break the cooking process into clear steps. A new step appears when you leave a
+                    completed step. Empty steps are not saved.
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={instructions.length >= 50 || isSubmitting}
-                  onClick={() => setInstructions((current) => [...current, createInstruction()])}
-                >
-                  <Plus />
-                  Add step
-                </Button>
               </div>
 
               <div className="mt-6 space-y-4">
@@ -363,10 +403,11 @@ function RecipeForm({ recipe }: RecipeFormProps) {
                         id={`instruction-${instruction.id}`}
                         className="min-h-24 resize-y bg-background"
                         value={instruction.description}
-                        minLength={3}
+                        minLength={instruction.description.trim() ? 3 : undefined}
                         maxLength={500}
                         placeholder="Describe this step"
-                        required
+                        required={Boolean(instruction.description.trim())}
+                        onBlur={appendInstructionIfComplete}
                         disabled={isSubmitting}
                         onChange={(event) => updateInstruction(instruction.id, event.target.value)}
                       />
@@ -388,6 +429,26 @@ function RecipeForm({ recipe }: RecipeFormProps) {
                   </div>
                 ))}
               </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-4"
+                disabled={
+                  instructions.length >= 50 ||
+                  isSubmitting ||
+                  !instructions.at(-1)?.description.trim()
+                }
+                onClick={() =>
+                  setInstructions((current) =>
+                    current.length >= 50 || !current.at(-1)?.description.trim()
+                      ? current
+                      : [...current, createInstruction()],
+                  )
+                }
+              >
+                <Plus />
+                Add step
+              </Button>
             </CardContent>
           </Card>
         </div>

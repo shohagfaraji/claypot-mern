@@ -275,7 +275,9 @@ export function MyRecipesPage() {
               onValueChange={(value) => updateFilter('status', value === 'all' ? null : value)}
             >
               <SelectTrigger className="h-10 w-full" aria-label="Filter by status">
-                <SelectValue />
+                <SelectValue>
+                  {status === 'all' ? 'All statuses' : status === 'draft' ? 'Drafts' : 'Published'}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All statuses</SelectItem>

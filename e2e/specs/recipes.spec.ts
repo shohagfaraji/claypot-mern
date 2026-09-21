@@ -14,10 +14,15 @@ test('a cook can create, edit, publish, unpublish, and delete a recipe', async (
     .fill('A smooth carrot soup with warming spices and fresh herbs.');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('Carrots');
   await page.getByLabel('Quantity', { exact: true }).fill('500 grams');
+  await expect(page.getByLabel('Quantity', { exact: true })).toBeFocused();
   await page
     .getByLabel('Step 1', { exact: true })
     .fill('Roast the carrots, then blend with hot vegetable stock.');
+  await expect(page.getByLabel('Ingredient 2', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Step 1', { exact: true })).toBeFocused();
+  await expect(page.getByLabel('Step 2', { exact: true })).toHaveCount(0);
   await page.getByLabel('Prep minutes').fill('10');
+  await expect(page.getByLabel('Step 2', { exact: true })).toBeVisible();
   await page.getByLabel('Cook minutes').fill('30');
   await page.getByLabel('Servings').fill('4');
   await page.getByLabel('Cuisine', { exact: true }).fill('British');
@@ -26,7 +31,19 @@ test('a cook can create, edit, publish, unpublish, and delete a recipe', async (
   await page.getByLabel('Find a recipe to pair').fill(dishes.rice.title);
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByRole('button', { name: `Add pairing ${dishes.rice.title}`, exact: true }).click();
+  await page.getByLabel('Ingredient 2', { exact: true }).fill('Salt');
   await page.getByRole('button', { name: 'Save recipe', exact: true }).click();
+  await expect(page).toHaveURL(/\/recipes\/new$/);
+  await expect(page.getByLabel('Quantity', { exact: true }).nth(1)).toBeFocused();
+  await page.getByLabel('Ingredient 2', { exact: true }).fill('');
+  await page.getByLabel('Step 2', { exact: true }).fill(' ');
+  const savedRequest = page.waitForRequest(
+    (request) => request.method() === 'POST' && request.url() === `${apiUrl}/recipes`,
+  );
+  await page.getByRole('button', { name: 'Save recipe', exact: true }).click();
+  const savedInput = (await savedRequest).postDataJSON();
+  expect(savedInput.ingredients).toEqual([{ name: 'Carrots', quantity: '500 grams' }]);
+  expect(savedInput.instructions).toHaveLength(1);
   await expect(page).toHaveURL(/\/my-recipes/);
   await expect(page.getByText('Recipe saved as a draft', { exact: true })).toBeVisible();
   const card = page

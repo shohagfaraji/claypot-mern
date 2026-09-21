@@ -154,7 +154,11 @@ export function SavedRecipesPage() {
               onValueChange={(value) => updateFilter('difficulty', value === 'all' ? null : value)}
             >
               <SelectTrigger className="h-10 w-full" aria-label="Filter by difficulty">
-                <SelectValue />
+                <SelectValue>
+                  {difficulty === 'all'
+                    ? 'All difficulties'
+                    : difficulty[0]!.toUpperCase() + difficulty.slice(1)}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All difficulties</SelectItem>
