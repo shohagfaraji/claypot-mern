@@ -32,6 +32,7 @@ export function useRecipes(queryString: string) {
 
     void getRecipes(queryString, controller.signal)
       .then(({ recipes, pagination }) => {
+        if (controller.signal.aborted) return;
         setState({
           requestKey: queryString,
           recipes,

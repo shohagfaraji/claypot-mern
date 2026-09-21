@@ -324,7 +324,21 @@ export async function listPublishedRecipes(
   }
 
   if (query.search !== undefined) {
-    match.$text = { $search: query.search };
+    match.$and = query.search
+      .trim()
+      .split(/\s+/)
+      .map((term) => {
+        const pattern = new RegExp(escapeRegularExpression(term), 'i');
+
+        return {
+          $or: [
+            { title: pattern },
+            { summary: pattern },
+            { tags: pattern },
+            { 'ingredients.name': pattern },
+          ],
+        };
+      });
   }
 
   if (query.difficulty !== undefined) {

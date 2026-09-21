@@ -127,7 +127,14 @@ describe('published recipe listing', () => {
     expect(pipeline[0]).toEqual({
       $match: {
         status: 'published',
-        $text: { $search: 'claypot rice' },
+        $and: ['claypot', 'rice'].map((term) => ({
+          $or: [
+            { title: new RegExp(term, 'i') },
+            { summary: new RegExp(term, 'i') },
+            { tags: new RegExp(term, 'i') },
+            { 'ingredients.name': new RegExp(term, 'i') },
+          ],
+        })),
         difficulty: 'medium',
         cuisine: /^South Asian$/i,
         category: /^Main course$/i,
@@ -142,6 +149,41 @@ describe('published recipe listing', () => {
     };
 
     expect(facet.items.slice(0, 2)).toEqual([{ $skip: 6 }, { $limit: 6 }]);
+  });
+
+  it.each(['c', 'chic', 'CHIC'])(
+    'matches partial search text %s across recipe fields',
+    async (search) => {
+      aggregateRecipesMock.mockResolvedValue([{ items: [], metadata: [] }]);
+
+      await listPublishedRecipes({ ...defaultQuery, search });
+
+      const pipeline = aggregateRecipesMock.mock.calls[0]?.[0];
+      const alternatives = pipeline[0].$match.$and[0].$or as Record<string, RegExp>[];
+
+      expect(pipeline[0].$match.status).toBe('published');
+      expect(alternatives.map((field) => Object.keys(field)[0])).toEqual([
+        'title',
+        'summary',
+        'tags',
+        'ingredients.name',
+      ]);
+      for (const field of alternatives) {
+        expect(Object.values(field)[0]?.test('Chicken')).toBe(true);
+      }
+    },
+  );
+
+  it('treats regular expression characters as literal search text', async () => {
+    aggregateRecipesMock.mockResolvedValue([{ items: [], metadata: [] }]);
+
+    await listPublishedRecipes({ ...defaultQuery, search: '.*(rice)' });
+
+    const pipeline = aggregateRecipesMock.mock.calls[0]?.[0];
+    const pattern = pipeline[0].$match.$and[0].$or[0].title as RegExp;
+
+    expect(pattern.test('Lemon rice')).toBe(false);
+    expect(pattern.test('Literal .*(rice)')).toBe(true);
   });
 
   it.each([

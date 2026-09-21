@@ -1,6 +1,62 @@
 import { dishes, members } from '../support/data.js';
 import { expect, selectOption, test } from '../support/fixtures.js';
 
+test('recipe search updates while typing and filter labels are clear before opening menus', async ({
+  page,
+}) => {
+  await page.goto('/recipes?page=2');
+  for (const [name, label] of [
+    ['Filter by difficulty', 'All difficulties'],
+    ['Filter by cuisine', 'All cuisines'],
+    ['Filter by category', 'All categories'],
+    ['Filter by tag', 'All tags'],
+  ])
+    await expect(page.getByRole('combobox', { name: name!, exact: true })).toContainText(label!);
+  const search = page.getByRole('searchbox', { name: 'Search recipes', exact: true });
+  await search.fill('L');
+  await expect(page).toHaveURL(/search=L/);
+  await expect(page.getByText('15 recipes found', { exact: true })).toBeVisible();
+  await search.fill('Lem');
+  await expect(page.getByText('1 recipe found', { exact: true })).toBeVisible();
+  await expect(page).not.toHaveURL(/page=2/);
+  await expect(search).toBeFocused();
+  await expect(search).toHaveValue('Lem');
+  await expect(page.getByRole('heading', { name: dishes.rice.title, exact: true })).toBeVisible();
+  await search.fill('nomatchingdish');
+  await expect(page.getByText('0 recipes found', { exact: true })).toBeVisible();
+  await expect(search).toBeFocused();
+  await search.fill('Lentil');
+  await page.getByRole('button', { name: 'Clear filters', exact: true }).click();
+  await expect(search).toHaveValue('');
+  await expect(page.getByText('15 recipes found', { exact: true })).toBeVisible();
+  await search.fill('Lemon');
+  await expect(page.getByText('1 recipe found', { exact: true })).toBeVisible();
+  await selectOption(page, 'Filter by difficulty', 'Easy');
+  await search.fill('Lentil');
+  await expect(page.getByText('0 recipes found', { exact: true })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Filter by difficulty' })).toContainText('Easy');
+  await page.goBack();
+  await expect(search).toHaveValue('Lemon');
+  await expect(page.getByText('1 recipe found', { exact: true })).toBeVisible();
+});
+
+test('partial ingredient searches find recipes and punctuation is treated literally', async ({
+  page,
+}) => {
+  await page.goto('/recipes');
+  const search = page.getByRole('searchbox', { name: 'Search recipes', exact: true });
+
+  await search.fill('RIC');
+  await expect(page.getByText('15 recipes found', { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/search=RIC/);
+  await expect(page.getByRole('heading', { name: dishes.toast.title, exact: true })).toBeVisible();
+  await search.fill('lem ric');
+  await expect(page.getByText('1 recipe found', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: dishes.rice.title, exact: true })).toBeVisible();
+  await search.fill('.*');
+  await expect(page.getByText('0 recipes found', { exact: true })).toBeVisible();
+});
+
 test('guests can search, combine filters, and clear them', async ({ page }) => {
   await page.goto('/recipes');
   await expect(page.getByText('15 recipes found', { exact: true })).toBeVisible();
